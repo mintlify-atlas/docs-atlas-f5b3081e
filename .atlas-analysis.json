@@ -1,0 +1,151 @@
+{
+  "projectType": "api-service",
+  "projectName": "KoroFood's Restaurant Management System",
+  "projectDescription": "A microservices-based REST API for managing restaurant reservations, events, tables, orders, and payments with real-time order handling and multimedia integration.",
+  "theme": "aspen",
+  "primaryColor": "#54acee",
+  "lightColor": "#25679d",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "architecture"
+            ]
+          },
+          {
+            "group": "Authentication",
+            "pages": [
+              "authentication/overview",
+              "authentication/jwt",
+              "authentication/oauth",
+              "authentication/social-login"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "deployment/docker",
+              "deployment/environment-variables",
+              "deployment/database-setup"
+            ]
+          },
+          {
+            "group": "Infrastructure",
+            "pages": [
+              "infrastructure/microservices",
+              "infrastructure/api-gateway",
+              "infrastructure/service-discovery",
+              "infrastructure/messaging",
+              "infrastructure/caching"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api-reference/introduction",
+              "api-reference/base-url",
+              "api-reference/error-handling"
+            ]
+          },
+          {
+            "group": "User Service",
+            "pages": [
+              "api-reference/user-service/authentication",
+              "api-reference/user-service/users",
+              "api-reference/user-service/chatbot"
+            ]
+          },
+          {
+            "group": "Reservation Service",
+            "pages": [
+              "api-reference/reservation-service/reservations",
+              "api-reference/reservation-service/availability"
+            ]
+          },
+          {
+            "group": "Table Service",
+            "pages": [
+              "api-reference/table-service/tables",
+              "api-reference/table-service/table-management"
+            ]
+          },
+          {
+            "group": "Order Service",
+            "pages": [
+              "api-reference/order-service/orders",
+              "api-reference/order-service/order-details",
+              "api-reference/order-service/reports"
+            ]
+          },
+          {
+            "group": "Menu Service",
+            "pages": [
+              "api-reference/menu-service/menu",
+              "api-reference/menu-service/dishes",
+              "api-reference/menu-service/tags"
+            ]
+          },
+          {
+            "group": "Event Service",
+            "pages": [
+              "api-reference/event-service/events",
+              "api-reference/event-service/themes",
+              "api-reference/event-service/event-tables"
+            ]
+          },
+          {
+            "group": "Payment Service",
+            "pages": [
+              "api-reference/payment-service/payments",
+              "api-reference/payment-service/payment-methods"
+            ]
+          },
+          {
+            "group": "Qualification Service",
+            "pages": [
+              "api-reference/qualification-service/ratings",
+              "api-reference/qualification-service/reviews"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Microservices architecture with Spring Boot",
+    "Real-time order management with WebSockets",
+    "QR code-based reservation validation",
+    "AI-powered chatbot for customer support",
+    "OAuth 2.0 and JWT authentication",
+    "Multi-database support (PostgreSQL, MongoDB, Redis)",
+    "Asynchronous messaging with RabbitMQ",
+    "Payment processing with receipt validation",
+    "Event and table reservation system",
+    "Administrative dashboard with reporting"
+  ],
+  "publicApiSurface": [
+    "POST /auth/login - User authentication",
+    "POST /auth/register - User registration",
+    "POST /auth/github - GitHub OAuth login",
+    "POST /auth/google - Google OAuth login",
+    "GET /eventos - List all events",
+    "POST /eventos - Create event",
+    "GET /pedido - List orders",
+    "POST /pedido - Create order",
+    "POST /pedido/newPlato - Add dish to order",
+    "GET /pedido/reporte/ventas-por-mesa - Sales report by table",
+    "GET /pedido/reporte/platos-mas-vendidos - Most sold dishes report"
+  ]
+}
