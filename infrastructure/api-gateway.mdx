@@ -1,0 +1,426 @@
+---
+title: API Gateway
+description: Spring Cloud Gateway configuration, routing rules, and JWT authentication
+---
+
+## Overview
+
+KoroFood uses **Spring Cloud Gateway** as the single entry point for all client requests. The gateway handles:
+
+- **Request routing** to appropriate microservices
+- **JWT token validation** for protected endpoints
+- **Load balancing** through Eureka service discovery
+- **CORS configuration** for cross-origin requests
+- **WebSocket support** for real-time features
+
+<Info>
+The API Gateway runs on port **8098** and routes all requests to backend services via Eureka service names.
+</Info>
+
+## Configuration
+
+### Application Properties
+
+From `apiGateway/src/main/resources/application.properties`:
+
+```properties
+spring.application.name=apiGateway
+server.port=8098
+
+# Eureka Configuration
+eureka.client.service-url.defaultZone=http://localhost:8761/eureka/
+eureka.client.register-with-eureka=true
+eureka.client.fetch-registry=true
+eureka.instance.prefer-ip-address=true
+
+# JWT Secret
+jwt.secret=${JWT_SECRET:SK_443ff638f8a74ba659cdb8336bfb5f91}
+
+# Gateway Discovery
+spring.cloud.gateway.discovery.locator.enabled=true
+spring.cloud.gateway.discovery.locator.lower-case-service-id=true
+```
+
+<Warning>
+In production, always use environment variables for `JWT_SECRET` instead of the default value.
+</Warning>
+
+## Routing Configuration
+
+The gateway defines routes in `GatewayConfig.java` using Spring Cloud Gateway's fluent API:
+
+### Route Definitions
+
+```java
+@Configuration
+public class GatewayConfig {
+
+    @Bean
+    public RouteLocator customRouteLocator(RouteLocatorBuilder builder) {
+        return builder.routes()
+            // User Service
+            .route("usuario-service",
+                r -> r.path("/auth/**", "/distrito/**", "/cliente/**", 
+                           "/user/feign/**", "/auth/google", "/auth/github")
+                    .uri("lb://userService"))
+            
+            // WebSocket Support
+            .route("usuario-service-ws",
+                r -> r.path("/ws/**", "/chat/**", "/chatbot/**")
+                    .uri("lb:ws://userService"))
+            
+            // Event Service
+            .route("evento-service",
+                r -> r.path("/eventos/**", "/evento/feign/**", 
+                           "/evento-mesas/**", "/tematicas/**")
+                    .uri("lb://eventService"))
+            
+            // Menu Service
+            .route("menu-service",
+                r -> r.path("/menu/**", "/menu/feign/**", "/etiquetas/**", 
+                           "/platos/**", "/plato-etiquetas/**")
+                    .uri("lb://menuService"))
+            
+            // User Service SOAP
+            .route("user-service-soap",
+                r -> r.path("/soap/**")
+                    .uri("lb://userServiceSoap"))
+            
+            // Qualification Service
+            .route("qualification-service",
+                r -> r.path("/calificacion/**")
+                    .uri("lb://qualificationService"))
+            
+            // Order Service
+            .route("order-service",
+                r -> r.path("/pedido/**", "/pedido/feign/**")
+                    .uri("lb://orderService"))
+            
+            // Reservation Service
+            .route("reservation-service",
+                r -> r.path("/reserva/**", "/reserva/feign/**", "/verificacion/**")
+                    .uri("lb://reservationService"))
+            
+            // Payment Service
+            .route("payment-service",
+                r -> r.path("/pago/**", "/pago/feign/**")
+                    .uri("lb://paymentService"))
+            
+            // Table Service
+            .route("table-service",
+                r -> r.path("/mesa/**", "/mesa/feign/**")
+                    .uri("lb://tableService"))
+            
+            .build();
+    }
+}
+```
+
+### Load Balancing
+
+The `lb://` prefix enables **client-side load balancing** through Spring Cloud LoadBalancer:
+
+<Steps>
+  <Step title="Service Discovery">
+    Gateway queries Eureka for available service instances
+  </Step>
+  <Step title="Load Distribution">
+    LoadBalancer selects an instance using round-robin strategy
+  </Step>
+  <Step title="Request Forwarding">
+    Gateway forwards the request to the selected instance
+  </Step>
+</Steps>
+
+### WebSocket Support
+
+WebSocket connections use the `lb:ws://` protocol:
+
+```java
+.route("usuario-service-ws",
+    r -> r.path("/ws/**", "/chat/**", "/chatbot/**")
+        .uri("lb:ws://userService"))
+```
+
+This enables real-time features like:
+- Chat messaging
+- AI chatbot interactions
+- Live notifications
+
+## JWT Authentication
+
+### Authentication Filter
+
+The `AuthFilter` implements `GlobalFilter` to validate JWT tokens on all requests:
+
+```java
+@Component
+public class AuthFilter implements GlobalFilter, Ordered {
+
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    private static final List<String> PUBLIC_PATHS = List.of(
+        "/auth/login",
+        "/auth/register",
+        "/distrito/list",
+        "/auth/github",
+        "/auth/google",
+        "/auth/social/register",
+        "/cliente/index",
+        "/evento/feign/**",
+        "/menu/feign",
+        "/menu",
+        "/calificacion",
+        "/user/feign/noauth/**",
+        "/ws/**",
+        "/pago/feign"
+    );
+
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        ServerHttpRequest request = exchange.getRequest();
+        String path = request.getPath().toString();
+        String method = request.getMethod().toString();
+        
+        // Allow OPTIONS for CORS preflight
+        if ("OPTIONS".equalsIgnoreCase(method)) {
+            exchange.getResponse().setStatusCode(HttpStatus.OK);
+            return exchange.getResponse().setComplete();
+        }
+        
+        // Skip authentication for public paths
+        if (isPublicPath(path)) {
+            return chain.filter(exchange);
+        }
+
+        // Extract JWT from Authorization header
+        String authHeader = request.getHeaders().getFirst("Authorization");
+        
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return onError(exchange, "No autorizado: falta token", HttpStatus.UNAUTHORIZED);
+        }
+
+        String token = authHeader.substring(7);
+
+        // Validate token
+        try {
+            if (!jwtUtil.validarToken(token)) {
+                return onError(exchange, "Token JWT inválido o expirado", HttpStatus.UNAUTHORIZED);
+            }
+        } catch (Exception e) {
+            return onError(exchange, "Token JWT inválido o mal formado", HttpStatus.UNAUTHORIZED);
+        }
+
+        // Extract username and add to request header
+        String username = jwtUtil.obtenerUsuarioAndToken(token);
+        
+        ServerHttpRequest modifiedRequest = exchange.getRequest().mutate()
+            .header("X-Username", username)
+            .build();
+
+        return chain.filter(exchange.mutate().request(modifiedRequest).build());
+    }
+}
+```
+
+### JWT Validation
+
+The `JwtUtil` class handles token validation:
+
+```java
+@Component
+public class JwtUtil {
+
+    @Value("${jwt.secret}")
+    private String secretKey;
+
+    private Key key;
+
+    @PostConstruct
+    public void init() {
+        this.key = Keys.hmacShaKeyFor(secretKey.getBytes());
+    }
+
+    public boolean validarToken(String token) {
+        try {
+            Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public String obtenerUsuarioAndToken(String token) {
+        Claims claims = Jwts.parserBuilder()
+            .setSigningKey(key)
+            .build()
+            .parseClaimsJws(token)
+            .getBody();
+        return claims.getSubject();
+    }
+}
+```
+
+<Note>
+The gateway validates tokens but doesn't generate them. Token generation is handled by the User Service.
+</Note>
+
+### Authentication Flow
+
+<Steps>
+  <Step title="Client Request">
+    Client sends request with `Authorization: Bearer <token>` header
+  </Step>
+  <Step title="Path Check">
+    Gateway checks if path is in public paths list
+  </Step>
+  <Step title="Token Extraction">
+    If protected, extract JWT from Authorization header
+  </Step>
+  <Step title="Token Validation">
+    Validate token signature and expiration using JWT_SECRET
+  </Step>
+  <Step title="Username Injection">
+    Extract username from token and add `X-Username` header
+  </Step>
+  <Step title="Request Forwarding">
+    Forward request to backend service with username header
+  </Step>
+</Steps>
+
+### Public Endpoints
+
+These endpoints bypass JWT validation:
+
+| Endpoint | Purpose |
+|----------|----------|
+| `/auth/login` | User login |
+| `/auth/register` | User registration |
+| `/auth/google` | Google OAuth |
+| `/auth/github` | GitHub OAuth |
+| `/distrito/list` | Public district list |
+| `/cliente/index` | Public client page |
+| `/menu` | Public menu view |
+| `/calificacion` | Public reviews |
+| `/ws/**` | WebSocket connections |
+| `**/feign/**` | Inter-service communication |
+
+<Warning>
+Feign endpoints are public at the gateway level but should implement service-to-service authentication for production.
+</Warning>
+
+## CORS Configuration
+
+The gateway handles CORS for all services:
+
+```java
+@Configuration
+public class CorsConfig {
+    
+    @Bean
+    public CorsWebFilter corsFilter() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowCredentials(true);
+        config.addAllowedOrigin("http://localhost:3000");
+        config.addAllowedHeader("*");
+        config.addAllowedMethod("*");
+        
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        
+        return new CorsWebFilter(source);
+    }
+}
+```
+
+## Docker Configuration
+
+From `docker-compose.yml`:
+
+```yaml
+api-gateway:
+  build: ./apiGateway
+  ports:
+    - "8098:8098"
+  depends_on:
+    eureka-server:
+      condition: service_healthy
+  environment:
+    EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+    EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+    JWT_SECRET: ${JWT_SECRET}
+```
+
+<Tip>
+The gateway depends on Eureka Server being healthy before starting, ensuring all service registrations are available.
+</Tip>
+
+## Testing the Gateway
+
+### Check Gateway Health
+
+```bash
+curl http://localhost:8098/actuator/health
+```
+
+### Test Public Endpoint
+
+```bash
+curl http://localhost:8098/distrito/list
+```
+
+### Test Protected Endpoint
+
+```bash
+# Without token - should return 401
+curl http://localhost:8098/cliente/profile
+
+# With valid token
+curl -H "Authorization: Bearer <your-jwt-token>" \
+     http://localhost:8098/cliente/profile
+```
+
+### Test WebSocket Connection
+
+```javascript
+const ws = new WebSocket('ws://localhost:8098/ws/chat');
+
+ws.onopen = () => {
+  console.log('WebSocket connected via gateway');
+};
+```
+
+## Performance Considerations
+
+<CardGroup cols={2}>
+  <Card title="Connection Pooling" icon="network-wired">
+    Gateway maintains connection pools to backend services
+  </Card>
+  <Card title="Circuit Breaker" icon="shield-halved">
+    Implement Resilience4j for fault tolerance
+  </Card>
+  <Card title="Rate Limiting" icon="gauge-high">
+    Consider adding rate limiting filters
+  </Card>
+  <Card title="Caching" icon="bolt">
+    Cache service discovery results
+  </Card>
+</CardGroup>
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Service Discovery" icon="compass" href="/infrastructure/service-discovery">
+    Understand Eureka integration
+  </Card>
+  <Card title="User Service API" icon="user" href="/api-reference/user-service/authentication">
+    Learn about JWT generation
+  </Card>
+  <Card title="Microservices" icon="cubes" href="/infrastructure/microservices">
+    See all routed services
+  </Card>
+</CardGroup>

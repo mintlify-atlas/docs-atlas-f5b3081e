@@ -1,0 +1,130 @@
+---
+title: 'User Management'
+description: 'Endpoints for managing user profiles and passwords'
+---
+
+## PUT /cliente/update/{id}
+
+Update a user's password.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  User ID
+</ParamField>
+
+### Request Body
+
+<ParamField body="passwordActual" type="string" required>
+  Current password for verification
+</ParamField>
+
+<ParamField body="passwordNuevo" type="string" required>
+  New password to set
+</ParamField>
+
+### Response
+
+Returns a success message string if the password was updated successfully.
+
+### Example Request
+
+```bash
+curl -X PUT https://api.korofood.com/cliente/update/1 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -d '{
+    "passwordActual": "oldPassword123",
+    "passwordNuevo": "newSecurePassword456"
+  }'
+```
+
+### Example Response (Success)
+
+```json
+"Password actualizado correctamente"
+```
+
+### Example Response (Error)
+
+```json
+{
+  "Error": "No se actualizo la contraseña"
+}
+```
+
+---
+
+## GET /cliente/perfil
+
+Get detailed profile information for a user.
+
+### Query Parameters
+
+<ParamField query="idUsuario" type="integer" required>
+  User ID to retrieve profile for
+</ParamField>
+
+### Response
+
+<ResponseField name="idUsuario" type="integer">
+  User ID
+</ResponseField>
+
+<ResponseField name="nombres" type="string">
+  User's first name
+</ResponseField>
+
+<ResponseField name="apellidos" type="string">
+  User's full last name (paternal + maternal)
+</ResponseField>
+
+<ResponseField name="correo" type="string">
+  User's email address
+</ResponseField>
+
+<ResponseField name="nroDoc" type="string">
+  Document number
+</ResponseField>
+
+<ResponseField name="imagen" type="string">
+  URL of user's profile image
+</ResponseField>
+
+<ResponseField name="direccion" type="string">
+  User's address
+</ResponseField>
+
+<ResponseField name="telefono" type="string">
+  User's phone number
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -X GET "https://api.korofood.com/cliente/perfil?idUsuario=1" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+### Example Response
+
+```json
+{
+  "idUsuario": 1,
+  "nombres": "Juan",
+  "apellidos": "Pérez García",
+  "correo": "juan.perez@example.com",
+  "nroDoc": "12345678",
+  "imagen": "https://cloudinary.com/korofoods/users/profile.jpg",
+  "direccion": "Av. Principal 123",
+  "telefono": "987654321"
+}
+```
+
+### Error Response
+
+```json
+{
+  "error": "No se encontro ningun perfil con ese ID 999"
+}
+```

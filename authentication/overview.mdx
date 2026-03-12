@@ -1,0 +1,145 @@
+---
+title: 'Authentication Overview'
+description: 'Learn about the authentication methods available in KoroFood Restaurant Management System'
+icon: 'shield-halved'
+---
+
+## Introduction
+
+KoroFood's Restaurant Management System provides multiple authentication methods to ensure secure access to the platform. The system supports traditional email/password authentication as well as modern social login integrations.
+
+## Authentication Methods
+
+The platform offers three primary authentication methods:
+
+<CardGroup cols={3}>
+  <Card title="JWT Authentication" icon="key" href="/authentication/jwt">
+    Traditional email and password login with JWT tokens
+  </Card>
+  <Card title="OAuth 2.0" icon="lock" href="/authentication/oauth">
+    OAuth 2.0 protocol for secure authorization
+  </Card>
+  <Card title="Social Login" icon="users" href="/authentication/social-login">
+    GitHub and Google social authentication
+  </Card>
+</CardGroup>
+
+## Authentication Flow
+
+The authentication system follows a stateless architecture using JWT tokens:
+
+<Steps>
+  <Step title="User Login">
+    User submits credentials (email/password) or initiates social login
+  </Step>
+  <Step title="Credential Verification">
+    System validates credentials against the database or external OAuth provider
+  </Step>
+  <Step title="Token Generation">
+    Upon successful authentication, a JWT token is generated with user information and roles
+  </Step>
+  <Step title="Token Usage">
+    Client includes the JWT token in subsequent API requests via the Authorization header
+  </Step>
+  <Step title="Token Validation">
+    API Gateway validates the token and extracts user information before routing requests
+  </Step>
+</Steps>
+
+## Security Configuration
+
+The User Service implements security using Spring Security with the following configuration:
+
+```java com/koroFoods/userService/config/SecurityConfig.java
+@Configuration
+@RequiredArgsConstructor
+public class SecurityConfig {
+
+    private final UserDetailsService userDetailsService;
+
+    @Bean
+    public BCryptPasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder(12);
+    }
+
+    @Bean
+    public AuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder());
+        return provider;
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
+        httpSecurity
+                .cors(cors -> {})
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .anyRequest().permitAll()
+                );
+
+        return httpSecurity.build();
+    }
+}
+```
+
+<Note>
+  The User Service permits all requests because authentication is handled at the API Gateway level. The Gateway validates JWT tokens before routing requests to backend services.
+</Note>
+
+## Token Management
+
+### Token Structure
+
+JWT tokens issued by the system contain:
+
+- **Subject**: User's email address
+- **Roles**: Array of user roles for authorization
+- **Issued At**: Token creation timestamp
+- **Expiration**: Token expiry time (10 hours from creation)
+- **Signature**: HMAC SHA256 signature for verification
+
+### Token Expiration
+
+Tokens are valid for **10 hours** after issuance. After expiration, users must re-authenticate to obtain a new token.
+
+```java
+// Token expires 10 hours after creation
+.setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10))
+```
+
+### Password Encryption
+
+Passwords are encrypted using BCrypt with a strength of 12 rounds, providing strong protection against brute-force attacks.
+
+```java
+@Bean
+public BCryptPasswordEncoder passwordEncoder() {
+    return new BCryptPasswordEncoder(12);
+}
+```
+
+## Base URL
+
+All authentication endpoints are available under the `/auth` base path:
+
+```
+http://localhost:8080/auth
+```
+
+<Warning>
+  Always use HTTPS in production environments to ensure credentials and tokens are transmitted securely.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="JWT Authentication" icon="key" href="/authentication/jwt">
+    Learn how to implement JWT-based login
+  </Card>
+  <Card title="Social Login" icon="users" href="/authentication/social-login">
+    Integrate GitHub and Google authentication
+  </Card>
+</CardGroup>

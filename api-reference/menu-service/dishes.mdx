@@ -1,0 +1,421 @@
+---
+title: 'Dishes'
+description: 'Manage restaurant dishes'
+---
+
+## Create Dish
+
+<api-endpoint method="POST" endpoint="/platos" />
+
+Create a new dish in the menu.
+
+### Request Body
+
+<ParamField body="nombre" type="string" required>
+  Dish name (max 100 characters)
+</ParamField>
+
+<ParamField body="precio" type="number" required>
+  Dish price (must be positive)
+</ParamField>
+
+<ParamField body="stock" type="integer" required>
+  Available stock (cannot be negative)
+</ParamField>
+
+<ParamField body="tipoPlato" type="string" required>
+  Dish type: "E" (Entrada/Appetizer), "S" (Segundo/Main), "P" (Postre/Dessert), "B" (Bebida/Beverage)
+</ParamField>
+
+<ParamField body="imagen" type="string">
+  Image URL for the dish
+</ParamField>
+
+<ParamField body="imagenBase64" type="string">
+  Base64 encoded image data
+</ParamField>
+
+### Response
+
+<ResponseField name="idPlato" type="integer">
+  Dish ID
+</ResponseField>
+
+<ResponseField name="nombre" type="string">
+  Dish name
+</ResponseField>
+
+<ResponseField name="precio" type="number">
+  Dish price
+</ResponseField>
+
+<ResponseField name="stock" type="integer">
+  Available stock
+</ResponseField>
+
+<ResponseField name="tipoPlato" type="string">
+  Dish type code
+</ResponseField>
+
+<ResponseField name="tipoPlayoDescripcion" type="string">
+  Dish type description
+</ResponseField>
+
+<ResponseField name="imagen" type="string">
+  Image URL
+</ResponseField>
+
+<ResponseField name="activo" type="boolean">
+  Whether the dish is active
+</ResponseField>
+
+<ResponseField name="etiquetas" type="array">
+  Array of tag objects associated with the dish
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X POST https://api.korofood.com/platos \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nombre": "Ceviche de Pescado",
+    "precio": 28.50,
+    "stock": 50,
+    "tipoPlato": "E",
+    "imagen": "https://example.com/ceviche.jpg"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "idPlato": 101,
+  "nombre": "Ceviche de Pescado",
+  "precio": 28.50,
+  "stock": 50,
+  "tipoPlato": "E",
+  "tipoPlayoDescripcion": "Entrada",
+  "imagen": "https://example.com/ceviche.jpg",
+  "activo": true,
+  "etiquetas": []
+}
+```
+</ResponseExample>
+
+## List All Dishes
+
+<api-endpoint method="GET" endpoint="/platos" />
+
+Retrieve all dishes in the menu.
+
+### Response
+
+<ResponseField name="data" type="array">
+  Array of dish objects
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl https://api.korofood.com/platos
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+[
+  {
+    "idPlato": 101,
+    "nombre": "Ceviche de Pescado",
+    "precio": 28.50,
+    "stock": 50,
+    "tipoPlato": "E",
+    "tipoPlayoDescripcion": "Entrada",
+    "imagen": "https://example.com/ceviche.jpg",
+    "activo": true,
+    "etiquetas": [
+      {
+        "idEtiqueta": 1,
+        "nombre": "Picante",
+        "descripcion": "Contiene ají",
+        "activo": true
+      }
+    ]
+  }
+]
+```
+</ResponseExample>
+
+## List Active Dishes
+
+<api-endpoint method="GET" endpoint="/platos/activos" />
+
+Retrieve all active dishes.
+
+### Response
+
+<ResponseField name="data" type="array">
+  Array of active dish objects
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl https://api.korofood.com/platos/activos
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+[
+  {
+    "idPlato": 101,
+    "nombre": "Ceviche de Pescado",
+    "precio": 28.50,
+    "stock": 50,
+    "tipoPlato": "E",
+    "tipoPlayoDescripcion": "Entrada",
+    "imagen": "https://example.com/ceviche.jpg",
+    "activo": true,
+    "etiquetas": []
+  }
+]
+```
+</ResponseExample>
+
+## List Dishes by Type
+
+<api-endpoint method="GET" endpoint="/platos/tipo/{tipoPlato}" />
+
+Retrieve dishes by type.
+
+### Path Parameters
+
+<ParamField path="tipoPlato" type="string" required>
+  Dish type: "E" (Entrada), "S" (Segundo), "P" (Postre), "B" (Bebida)
+</ParamField>
+
+### Response
+
+<ResponseField name="data" type="array">
+  Array of dish objects of the specified type
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl https://api.korofood.com/platos/tipo/E
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+[
+  {
+    "idPlato": 101,
+    "nombre": "Ceviche de Pescado",
+    "precio": 28.50,
+    "stock": 50,
+    "tipoPlato": "E",
+    "tipoPlayoDescripcion": "Entrada",
+    "imagen": "https://example.com/ceviche.jpg",
+    "activo": true,
+    "etiquetas": []
+  }
+]
+```
+</ResponseExample>
+
+## Get Dish by ID
+
+<api-endpoint method="GET" endpoint="/platos/{id}" />
+
+Retrieve a specific dish by ID.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  Dish ID
+</ParamField>
+
+### Response
+
+<ResponseField name="idPlato" type="integer">
+  Dish ID
+</ResponseField>
+
+<ResponseField name="nombre" type="string">
+  Dish name
+</ResponseField>
+
+<ResponseField name="precio" type="number">
+  Dish price
+</ResponseField>
+
+<ResponseField name="stock" type="integer">
+  Available stock
+</ResponseField>
+
+<ResponseField name="tipoPlato" type="string">
+  Dish type code
+</ResponseField>
+
+<ResponseField name="imagen" type="string">
+  Image URL
+</ResponseField>
+
+<ResponseField name="activo" type="boolean">
+  Active status
+</ResponseField>
+
+<ResponseField name="etiquetas" type="array">
+  Associated tags
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl https://api.korofood.com/platos/101
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "idPlato": 101,
+  "nombre": "Ceviche de Pescado",
+  "precio": 28.50,
+  "stock": 50,
+  "tipoPlato": "E",
+  "tipoPlayoDescripcion": "Entrada",
+  "imagen": "https://example.com/ceviche.jpg",
+  "activo": true,
+  "etiquetas": []
+}
+```
+</ResponseExample>
+
+## Update Dish
+
+<api-endpoint method="PUT" endpoint="/platos/{id}" />
+
+Update an existing dish.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  Dish ID to update
+</ParamField>
+
+### Request Body
+
+<ParamField body="nombre" type="string" required>
+  Updated dish name
+</ParamField>
+
+<ParamField body="precio" type="number" required>
+  Updated price
+</ParamField>
+
+<ParamField body="stock" type="integer" required>
+  Updated stock
+</ParamField>
+
+<ParamField body="tipoPlato" type="string" required>
+  Updated dish type
+</ParamField>
+
+<ParamField body="imagen" type="string">
+  Updated image URL
+</ParamField>
+
+### Response
+
+<ResponseField name="idPlato" type="integer">
+  Dish ID
+</ResponseField>
+
+<ResponseField name="nombre" type="string">
+  Updated dish name
+</ResponseField>
+
+<ResponseField name="precio" type="number">
+  Updated price
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X PUT https://api.korofood.com/platos/101 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nombre": "Ceviche Mixto",
+    "precio": 32.00,
+    "stock": 45,
+    "tipoPlato": "E"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "idPlato": 101,
+  "nombre": "Ceviche Mixto",
+  "precio": 32.00,
+  "stock": 45,
+  "tipoPlato": "E",
+  "tipoPlayoDescripcion": "Entrada",
+  "activo": true,
+  "etiquetas": []
+}
+```
+</ResponseExample>
+
+## Delete Dish
+
+<api-endpoint method="DELETE" endpoint="/platos/{id}" />
+
+Delete a dish (soft delete - marks as inactive).
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  Dish ID to delete
+</ParamField>
+
+### Response
+
+Returns HTTP 204 No Content on success.
+
+<RequestExample>
+```bash cURL
+curl -X DELETE https://api.korofood.com/platos/101
+```
+</RequestExample>
+
+<ResponseExample>
+```text
+HTTP/1.1 204 No Content
+```
+</ResponseExample>
+
+## Generate Dishes Report
+
+<api-endpoint method="GET" endpoint="/platos/reporte/platos" />
+
+Generate a PDF report of all dishes.
+
+### Response
+
+Returns a PDF file with the dishes report.
+
+<RequestExample>
+```bash cURL
+curl https://api.korofood.com/platos/reporte/platos \
+  -o reporte-platos.pdf
+```
+</RequestExample>
+
+<ResponseExample>
+```text
+PDF file downloaded successfully.
+Filename: reporte-platos.pdf
+```
+</ResponseExample>

@@ -1,0 +1,589 @@
+---
+title: 'Environment Variables'
+description: 'Complete reference for all environment variables in KoroFood Restaurant Management System'
+icon: 'gear'
+---
+
+## Overview
+
+KoroFood's microservices architecture requires various environment variables for configuration. This guide documents all required and optional environment variables across the system.
+
+## Configuration File
+
+Create a `.env` file in the project root directory:
+
+```bash
+# Create from template
+cp .env.example .env
+
+# Edit with your values
+nano .env
+```
+
+<Warning>
+  **Never commit your `.env` file to version control!** Add it to `.gitignore` to prevent accidental exposure of sensitive credentials.
+</Warning>
+
+## Required Variables
+
+These variables must be configured for the system to function properly:
+
+### Authentication & Security
+
+<AccordionGroup>
+  <Accordion title="JWT_SECRET">
+    **Used by:** API Gateway
+    
+    **Description:** Secret key for signing and verifying JWT tokens used in authentication.
+    
+    **Type:** String
+    
+    **Required:** Yes
+    
+    **Example:**
+    ```env
+    JWT_SECRET=your_super_secure_jwt_secret_key_min_256_bits
+    ```
+    
+    <Note>
+      Generate a strong random key using:
+      ```bash
+      openssl rand -base64 32
+      ```
+    </Note>
+  </Accordion>
+</AccordionGroup>
+
+### Cloudinary Configuration
+
+Cloudinary is used for image storage and management across multiple services.
+
+<AccordionGroup>
+  <Accordion title="User, Menu & Event Services Configuration">
+    **Used by:** User Service, Menu Service, Event Service
+    
+    These three services use a common set of Cloudinary credentials:
+    
+    ```env
+    CLOUDINARY_NAME=your_cloudinary_cloud_name
+    CLOUDINARY_KEY_KOROFOODS=your_cloudinary_api_key
+    CLOUDINARY_SECRET_KOROFOODS=your_cloudinary_api_secret
+    ```
+    
+    **Variables:**
+    
+    | Variable | Description | Required |
+    |----------|-------------|----------|
+    | `CLOUDINARY_NAME` | Your Cloudinary cloud name | Yes |
+    | `CLOUDINARY_KEY_KOROFOODS` | API key for KoroFoods project | Yes |
+    | `CLOUDINARY_SECRET_KOROFOODS` | API secret for KoroFoods project | Yes |
+    
+    <Note>
+      Get your credentials from [Cloudinary Dashboard](https://cloudinary.com/console)
+    </Note>
+  </Accordion>
+  
+  <Accordion title="Payment Service Configuration">
+    **Used by:** Payment Service (separate credentials)
+    
+    The payment service uses different Cloudinary credentials for receipt image storage:
+    
+    ```env
+    CLOUDINARY_CLOUD_NAME=your_payment_cloud_name
+    CLOUDINARY_API_KEY=your_payment_api_key
+    CLOUDINARY_API_SECRET=your_payment_api_secret
+    ```
+    
+    **Variables:**
+    
+    | Variable | Description | Required |
+    |----------|-------------|----------|
+    | `CLOUDINARY_CLOUD_NAME` | Cloud name for payment receipts | Yes |
+    | `CLOUDINARY_API_KEY` | API key for payment service | Yes |
+    | `CLOUDINARY_API_SECRET` | API secret for payment service | Yes |
+    
+    <Warning>
+      Payment service uses different variable names (`CLOUDINARY_API_KEY` vs `CLOUDINARY_KEY_KOROFOODS`). Ensure you set both sets of credentials.
+    </Warning>
+  </Accordion>
+</AccordionGroup>
+
+### AI & Machine Learning
+
+<AccordionGroup>
+  <Accordion title="GEMINI_API_KEY">
+    **Used by:** User Service
+    
+    **Description:** Google Gemini API key for AI-powered chatbot functionality.
+    
+    **Type:** String
+    
+    **Required:** Yes
+    
+    **Example:**
+    ```env
+    GEMINI_API_KEY=AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    ```
+    
+    **Get API Key:** [Google AI Studio](https://makersuite.google.com/app/apikey)
+    
+    <Note>
+      The Gemini API powers the restaurant's AI chatbot for customer support and automated responses.
+    </Note>
+  </Accordion>
+  
+  <Accordion title="GOOGLE_VISION_API_KEY">
+    **Used by:** Payment Service
+    
+    **Description:** Google Cloud Vision API key for OCR (Optical Character Recognition) on payment receipts.
+    
+    **Type:** String
+    
+    **Required:** Yes
+    
+    **Example:**
+    ```env
+    GOOGLE_VISION_API_KEY=AIzaSyYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY
+    ```
+    
+    **Setup:**
+    1. Enable Cloud Vision API in [Google Cloud Console](https://console.cloud.google.com/)
+    2. Create API credentials
+    3. Copy the API key
+    
+    <Note>
+      Used to extract text from uploaded receipt images for payment verification.
+    </Note>
+  </Accordion>
+</AccordionGroup>
+
+### Email Notifications
+
+<AccordionGroup>
+  <Accordion title="Email Configuration">
+    **Used by:** Reservation Service
+    
+    **Description:** SMTP credentials for sending reservation confirmation emails.
+    
+    **Variables:**
+    ```env
+    EMAIL_USERNAME=your_email@gmail.com
+    EMAIL_PASSWORD=your_app_specific_password
+    ```
+    
+    | Variable | Description | Required |
+    |----------|-------------|----------|
+    | `EMAIL_USERNAME` | Email address for sending notifications | Yes |
+    | `EMAIL_PASSWORD` | App-specific password (not regular password) | Yes |
+    
+    <Warning>
+      For Gmail, you must use an [App Password](https://support.google.com/accounts/answer/185833), not your regular account password.
+    </Warning>
+    
+    **Gmail Setup:**
+    1. Enable 2-Factor Authentication
+    2. Go to Security → App Passwords
+    3. Generate a new app password for "Mail"
+    4. Use the generated 16-character password
+  </Accordion>
+</AccordionGroup>
+
+### SMS Notifications (Twilio)
+
+<AccordionGroup>
+  <Accordion title="Twilio Configuration">
+    **Used by:** Reservation Service
+    
+    **Description:** Twilio credentials for sending SMS notifications for reservations.
+    
+    **Variables:**
+    ```env
+    TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    TWILIO_AUTH_TOKEN=your_auth_token_here
+    TWILIO_PHONE_NUMBER=+1234567890
+    ```
+    
+    | Variable | Description | Required |
+    |----------|-------------|----------|
+    | `TWILIO_ACCOUNT_SID` | Your Twilio account identifier | Yes |
+    | `TWILIO_AUTH_TOKEN` | Authentication token | Yes |
+    | `TWILIO_PHONE_NUMBER` | Twilio phone number (E.164 format) | Yes |
+    
+    **Get Credentials:** [Twilio Console](https://console.twilio.com/)
+    
+    <Note>
+      Twilio sends SMS confirmations and reminders to customers for their reservations.
+    </Note>
+  </Accordion>
+</AccordionGroup>
+
+## Internal Variables
+
+These variables are configured in `docker-compose.yml` and typically don't need modification:
+
+### Database Configuration
+
+<CodeGroup>
+
+```env PostgreSQL
+# Set in docker-compose.yml for postgres service
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=sql
+
+# Used by all microservices
+SPRING_DATASOURCE_USERNAME=postgres
+SPRING_DATASOURCE_PASSWORD=sql
+```
+
+```env Service Database URLs
+# User Service
+SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/DB_USER_SERVICE
+
+# Table Service
+SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/DB_TABLE_SERVICE
+
+# Reservation Service
+SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/DB_RESERVATION_SERVICE
+
+# Qualification Service
+SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/DB_QUALIFICATION_SERVICE
+
+# Payment Service
+SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/DB_PAYMENT_SERVICE
+
+# Order Service
+SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/DB_ORDER_SERVICE
+
+# Menu Service
+SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/DB_MENU_SERVICE
+
+# Event Service
+SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/DB_EVENT_SERVICE
+```
+
+```env MongoDB
+# User Service (for chat messages)
+SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/DB_MENSAJES
+```
+
+</CodeGroup>
+
+### Cache & Message Queue
+
+<CodeGroup>
+
+```env Redis
+# User Service & Qualification Service
+SPRING_DATA_REDIS_HOST=redis
+SPRING_DATA_REDIS_PORT=6379
+```
+
+```env RabbitMQ
+# Payment Service
+SPRING_RABBITMQ_HOST=rabbitmq
+SPRING_RABBITMQ_PORT=5672
+SPRING_RABBITMQ_USERNAME=guest
+SPRING_RABBITMQ_PASSWORD=guest
+```
+
+</CodeGroup>
+
+### Service Discovery
+
+```env
+# All microservices
+EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
+```
+
+## Complete .env Template
+
+Here's a complete template for your `.env` file:
+
+```env
+# ============================================
+# KOROFOOD'S RESTAURANT MANAGEMENT SYSTEM
+# Environment Configuration
+# ============================================
+
+# -------------------- SECURITY --------------------
+# API Gateway JWT Secret (min 32 characters)
+JWT_SECRET=your_super_secure_jwt_secret_key_min_256_bits
+
+# -------------------- CLOUDINARY (User/Menu/Event Services) --------------------
+CLOUDINARY_NAME=your_cloudinary_cloud_name
+CLOUDINARY_KEY_KOROFOODS=your_cloudinary_api_key
+CLOUDINARY_SECRET_KOROFOODS=your_cloudinary_api_secret
+
+# -------------------- CLOUDINARY (Payment Service) --------------------
+CLOUDINARY_CLOUD_NAME=your_payment_cloud_name
+CLOUDINARY_API_KEY=your_payment_api_key
+CLOUDINARY_API_SECRET=your_payment_api_secret
+
+# -------------------- AI & MACHINE LEARNING --------------------
+# Google Gemini API for AI Chatbot
+GEMINI_API_KEY=AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+# Google Cloud Vision API for Receipt OCR
+GOOGLE_VISION_API_KEY=AIzaSyYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY
+
+# -------------------- EMAIL NOTIFICATIONS --------------------
+# SMTP Configuration (Gmail recommended)
+EMAIL_USERNAME=your_email@gmail.com
+EMAIL_PASSWORD=your_app_specific_password
+
+# -------------------- SMS NOTIFICATIONS --------------------
+# Twilio Configuration
+TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_AUTH_TOKEN=your_auth_token_here
+TWILIO_PHONE_NUMBER=+1234567890
+
+# ============================================
+# END OF CONFIGURATION
+# ============================================
+```
+
+## Environment-Specific Configuration
+
+<Tabs>
+  <Tab title="Development">
+    For local development, use test credentials and reduced security:
+    
+    ```env
+    # Relaxed JWT for development
+    JWT_SECRET=dev_secret_key_not_for_production_use_only
+    
+    # Use Cloudinary test account
+    CLOUDINARY_NAME=test-account
+    
+    # Optional: Skip email/SMS in development
+    # Leave Twilio variables empty to disable SMS
+    ```
+    
+    <Warning>
+      Never use development credentials in production!
+    </Warning>
+  </Tab>
+  
+  <Tab title="Staging">
+    Staging should mirror production but with separate accounts:
+    
+    ```env
+    # Separate Cloudinary account for staging
+    CLOUDINARY_NAME=korofoods-staging
+    
+    # Separate Twilio test number
+    TWILIO_PHONE_NUMBER=+15005550006  # Twilio test number
+    
+    # Use test email account
+    EMAIL_USERNAME=staging@korofoods.com
+    ```
+  </Tab>
+  
+  <Tab title="Production">
+    Production requires full security and real credentials:
+    
+    ```env
+    # Strong JWT secret (64+ characters)
+    JWT_SECRET=$(openssl rand -base64 64)
+    
+    # Production Cloudinary account
+    CLOUDINARY_NAME=korofoods-prod
+    
+    # Production Twilio number
+    TWILIO_PHONE_NUMBER=+1234567890
+    
+    # Production email
+    EMAIL_USERNAME=noreply@korofoods.com
+    ```
+    
+    <Warning>
+      - Use strong, unique secrets for all credentials
+      - Rotate secrets regularly (every 90 days)
+      - Enable monitoring and alerting
+      - Store secrets in a secure vault (AWS Secrets Manager, HashiCorp Vault)
+    </Warning>
+  </Tab>
+</Tabs>
+
+## Validation
+
+Validate your environment configuration before deployment:
+
+<Steps>
+  <Step title="Check Required Variables">
+    Ensure all required variables are set:
+    
+    ```bash
+    # Check if .env file exists
+    if [ ! -f .env ]; then
+      echo "Error: .env file not found!"
+      exit 1
+    fi
+    
+    # Source the file
+    source .env
+    
+    # Check required variables
+    required_vars=(
+      "JWT_SECRET"
+      "CLOUDINARY_NAME"
+      "GEMINI_API_KEY"
+      "GOOGLE_VISION_API_KEY"
+      "EMAIL_USERNAME"
+      "TWILIO_ACCOUNT_SID"
+    )
+    
+    for var in "${required_vars[@]}"; do
+      if [ -z "${!var}" ]; then
+        echo "Error: $var is not set"
+        exit 1
+      fi
+    done
+    
+    echo "All required variables are set!"
+    ```
+  </Step>
+  
+  <Step title="Test API Credentials">
+    Verify external API credentials work:
+    
+    ```bash
+    # Test Cloudinary
+    curl -X GET "https://api.cloudinary.com/v1_1/$CLOUDINARY_NAME/resources/image" \
+      -u "$CLOUDINARY_API_KEY:$CLOUDINARY_API_SECRET"
+    
+    # Test Twilio
+    curl -X GET "https://api.twilio.com/2010-04-01/Accounts/$TWILIO_ACCOUNT_SID.json" \
+      -u "$TWILIO_ACCOUNT_SID:$TWILIO_AUTH_TOKEN"
+    ```
+  </Step>
+  
+  <Step title="Verify Docker Integration">
+    Check that Docker Compose can read the variables:
+    
+    ```bash
+    docker-compose config | grep -E "CLOUDINARY|JWT|GEMINI|TWILIO"
+    ```
+  </Step>
+</Steps>
+
+## Security Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Secret Rotation" icon="rotate">
+    Rotate sensitive credentials every 90 days:
+    - JWT_SECRET
+    - API keys
+    - Database passwords
+  </Card>
+  
+  <Card title="Access Control" icon="lock">
+    Limit access to `.env` file:
+    ```bash
+    chmod 600 .env
+    ```
+  </Card>
+  
+  <Card title="Version Control" icon="code-branch">
+    Never commit secrets:
+    ```bash
+    echo ".env" >> .gitignore
+    ```
+  </Card>
+  
+  <Card title="Secret Management" icon="vault">
+    Use a secret manager in production:
+    - AWS Secrets Manager
+    - HashiCorp Vault
+    - Azure Key Vault
+  </Card>
+</CardGroup>
+
+<Warning>
+  **Common Security Mistakes to Avoid:**
+  
+  - Committing `.env` to version control
+  - Using weak or default passwords
+  - Sharing API keys in chat/email
+  - Using production keys in development
+  - Hardcoding secrets in source code
+</Warning>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Variables not loading in Docker">
+    Ensure the `.env` file is in the same directory as `docker-compose.yml`:
+    
+    ```bash
+    # Check file location
+    ls -la .env
+    
+    # Verify Docker Compose can read it
+    docker-compose config
+    
+    # Restart services to reload variables
+    docker-compose down
+    docker-compose up -d
+    ```
+  </Accordion>
+  
+  <Accordion title="Cloudinary authentication fails">
+    Verify credentials are correct:
+    
+    ```bash
+    # Test API connection
+    curl -X GET "https://api.cloudinary.com/v1_1/$CLOUDINARY_NAME/resources/image" \
+      -u "$CLOUDINARY_API_KEY:$CLOUDINARY_API_SECRET"
+    ```
+    
+    Common issues:
+    - Wrong cloud name
+    - Incorrect API key format
+    - Account not activated
+  </Accordion>
+  
+  <Accordion title="Twilio SMS not sending">
+    Check Twilio credentials and phone number format:
+    
+    ```bash
+    # Phone number must be in E.164 format: +[country code][number]
+    # Correct: +14155552671
+    # Incorrect: (415) 555-2671
+    ```
+    
+    Verify account:
+    - Account is active
+    - Phone number is verified
+    - Sufficient balance
+  </Accordion>
+  
+  <Accordion title="JWT authentication errors">
+    Ensure JWT_SECRET is:
+    - At least 256 bits (32 characters)
+    - Properly set in API Gateway
+    - Consistent across deployments
+    
+    ```bash
+    # Generate strong secret
+    openssl rand -base64 32
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={3}>
+  <Card title="Docker Setup" icon="docker" href="/deployment/docker">
+    Deploy with Docker Compose
+  </Card>
+  
+  <Card title="Database Setup" icon="database" href="/deployment/database-setup">
+    Configure databases
+  </Card>
+  
+  <Card title="Authentication" icon="shield" href="/authentication/overview">
+    Learn about authentication and security
+  </Card>
+</CardGroup>

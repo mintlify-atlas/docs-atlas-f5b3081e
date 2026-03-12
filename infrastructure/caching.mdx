@@ -1,0 +1,621 @@
+---
+title: Caching with Redis
+description: Redis caching strategy for improved performance and session management
+---
+
+## Overview
+
+KoroFood uses **Redis** as its caching layer to:
+
+- **Reduce database load** by caching frequently accessed data
+- **Improve response times** with in-memory data access
+- **Manage user sessions** across distributed services
+- **Store temporary data** like verification codes and tokens
+
+<Info>
+Redis runs on port **6379** and is used primarily by User Service and Qualification Service.
+</Info>
+
+## Redis Configuration
+
+### Docker Setup
+
+From `docker-compose.yml`:
+
+```yaml
+redis:
+  image: redis:alpine
+  ports:
+    - "6379:6379"
+  healthcheck:
+    test: ["CMD", "redis-cli", "ping"]
+    interval: 10s
+    timeout: 3s
+    retries: 5
+```
+
+<Tip>
+The lightweight Alpine Linux image keeps the Redis container small while providing full functionality.
+</Tip>
+
+## User Service Integration
+
+### Spring Configuration
+
+From `userService/userService/src/main/java/com/koroFoods/userService/config/RedisConfig.java`:
+
+```java
+package com.koroFoods.userService.config;
+
+import java.time.Duration;
+
+import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.cache.RedisCacheConfiguration;
+import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.RedisSerializationContext;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
+
+@Configuration
+@EnableCaching
+public class RedisConfig {
+
+    @Bean
+    public RedisCacheManager cacheManager(RedisConnectionFactory connectionFactory) {
+        RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
+                .serializeKeysWith(
+                    RedisSerializationContext.SerializationPair
+                        .fromSerializer(new StringRedisSerializer()))
+                .serializeValuesWith(
+                    RedisSerializationContext.SerializationPair
+                        .fromSerializer(new GenericJackson2JsonRedisSerializer()))
+                .entryTtl(Duration.ofMinutes(10));
+
+        return RedisCacheManager.builder(connectionFactory)
+                .cacheDefaults(config)
+                .build();
+    }
+}
+```
+
+### Key Configuration Elements
+
+<AccordionGroup>
+  <Accordion title="@EnableCaching">
+    Enables Spring's annotation-driven cache management:
+    
+    ```java
+    @EnableCaching
+    public class RedisConfig {
+        // Activates @Cacheable, @CacheEvict, @CachePut
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Key Serialization">
+    `StringRedisSerializer` stores cache keys as readable strings:
+    
+    ```
+    usuarios::123       → Clear, debuggable keys
+    vs
+    \xAC\xED\x00\x05t  → Binary, hard to debug
+    ```
+  </Accordion>
+  
+  <Accordion title="Value Serialization">
+    `GenericJackson2JsonRedisSerializer` stores values as JSON:
+    
+    ```json
+    {
+      "@class": "com.koroFoods.userService.dto.UsuarioDTO",
+      "id": 123,
+      "nombre": "John Doe",
+      "email": "john@example.com"
+    }
+    ```
+    
+    Preserves type information for deserialization.
+  </Accordion>
+  
+  <Accordion title="TTL (Time To Live)">
+    Cache entries automatically expire after 10 minutes:
+    
+    ```java
+    .entryTtl(Duration.ofMinutes(10))
+    ```
+    
+    Prevents stale data while maintaining cache benefits.
+  </Accordion>
+</AccordionGroup>
+
+## Caching in Action
+
+### User Service Caching
+
+From `userService/userService/src/main/java/com/koroFoods/userService/service/UsuarioService.java`:
+
+```java
+public class UsuarioService {
+
+    @Cacheable(value = "usuarios", key = "#id")
+    public UsuarioDTO obtenerUsuarioPorId(Long id) {
+        // This method only hits the database if cache misses
+        return usuarioRepository.findById(id)
+            .map(this::convertToDTO)
+            .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+    }
+
+    @Cacheable(value = "usuariosPublicos", key = "#id")
+    public UsuarioPublicoDTO obtenerUsuarioPublico(Long id) {
+        // Separate cache for public user data
+        return usuarioRepository.findById(id)
+            .map(this::convertToPublicDTO)
+            .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+    }
+    
+    @CachePut(value = "usuarios", key = "#usuario.id")
+    public UsuarioDTO actualizarUsuario(UsuarioDTO usuario) {
+        // Updates both database and cache
+        Usuario entity = usuarioRepository.save(convertToEntity(usuario));
+        return convertToDTO(entity);
+    }
+    
+    @CacheEvict(value = "usuarios", key = "#id")
+    public void eliminarUsuario(Long id) {
+        // Removes from cache before deleting from database
+        usuarioRepository.deleteById(id);
+    }
+}
+```
+
+### Cache Behavior
+
+<Steps>
+  <Step title="First Request (Cache Miss)">
+    ```java
+    usuarioService.obtenerUsuarioPorId(123);
+    ```
+    
+    - Checks Redis for key `usuarios::123`
+    - Not found, queries PostgreSQL
+    - Stores result in Redis with 10-minute TTL
+    - Returns result to client
+  </Step>
+  
+  <Step title="Subsequent Requests (Cache Hit)">
+    ```java
+    usuarioService.obtenerUsuarioPorId(123);
+    ```
+    
+    - Checks Redis for key `usuarios::123`
+    - Found! Returns cached data immediately
+    - No database query needed
+    - Response time: ~1ms vs ~50ms
+  </Step>
+  
+  <Step title="After 10 Minutes (Cache Expiry)">
+    - Redis automatically deletes expired entry
+    - Next request becomes cache miss
+    - Fresh data loaded from database
+    - Cache cycle repeats
+  </Step>
+</Steps>
+
+## Cache Annotations
+
+### @Cacheable
+
+Caches method results:
+
+```java
+@Cacheable(value = "usuarios", key = "#id")
+public UsuarioDTO obtenerUsuarioPorId(Long id) {
+    // Only executes on cache miss
+}
+```
+
+**Parameters:**
+- `value`: Cache name (e.g., "usuarios")
+- `key`: SpEL expression for cache key (e.g., `#id`, `#usuario.email`)
+- `condition`: Optional condition for caching (e.g., `#id > 0`)
+- `unless`: Don't cache if condition is true (e.g., `#result == null`)
+
+### @CachePut
+
+Updates cache with new value:
+
+```java
+@CachePut(value = "usuarios", key = "#usuario.id")
+public UsuarioDTO actualizarUsuario(UsuarioDTO usuario) {
+    // Always executes, updates cache with result
+}
+```
+
+<Warning>
+Use `@CachePut` for updates, not `@Cacheable`. `@Cacheable` would skip the method if cache exists.
+</Warning>
+
+### @CacheEvict
+
+Removes entries from cache:
+
+```java
+@CacheEvict(value = "usuarios", key = "#id")
+public void eliminarUsuario(Long id) {
+    // Removes from cache before executing
+}
+
+@CacheEvict(value = "usuarios", allEntries = true)
+public void resetearCache() {
+    // Clears entire "usuarios" cache
+}
+```
+
+## Docker Configuration
+
+Services connect to Redis via environment variables:
+
+### User Service
+
+```yaml
+user-service:
+  build: ./userService/userService
+  ports:
+    - "8081:8081"
+  depends_on:
+    redis:
+      condition: service_healthy
+  environment:
+    SPRING_DATA_REDIS_HOST: redis
+    SPRING_DATA_REDIS_PORT: 6379
+```
+
+### Qualification Service
+
+```yaml
+qualification-service:
+  build: ./qualificationService/qualificationService
+  ports:
+    - "8084:8084"
+  depends_on:
+    redis:
+      condition: service_healthy
+  environment:
+    SPRING_DATA_REDIS_HOST: redis
+    SPRING_DATA_REDIS_PORT: 6379
+```
+
+## Cache Usage Patterns
+
+<Tabs>
+  <Tab title="Read-Through">
+    Application code checks cache first, falls back to database:
+    
+    ```java
+    @Cacheable(value = "usuarios", key = "#id")
+    public UsuarioDTO getUser(Long id) {
+        return database.findById(id); // Only on cache miss
+    }
+    ```
+    
+    **Benefits:** Simple, automatic cache population
+  </Tab>
+  
+  <Tab title="Write-Through">
+    Updates go to cache and database simultaneously:
+    
+    ```java
+    @CachePut(value = "usuarios", key = "#usuario.id")
+    public UsuarioDTO updateUser(UsuarioDTO usuario) {
+        return database.save(usuario); // Updates both
+    }
+    ```
+    
+    **Benefits:** Cache always consistent with database
+  </Tab>
+  
+  <Tab title="Cache-Aside">
+    Application manually manages cache:
+    
+    ```java
+    public UsuarioDTO getUser(Long id) {
+        String key = "usuarios::" + id;
+        
+        // Try cache first
+        UsuarioDTO cached = redisTemplate.opsForValue().get(key);
+        if (cached != null) return cached;
+        
+        // Load from database
+        UsuarioDTO user = database.findById(id);
+        
+        // Store in cache
+        redisTemplate.opsForValue().set(key, user, Duration.ofMinutes(10));
+        
+        return user;
+    }
+    ```
+    
+    **Benefits:** Fine-grained control over caching logic
+  </Tab>
+</Tabs>
+
+## Session Management
+
+Redis can store user sessions for distributed session management:
+
+### Spring Session Configuration
+
+```properties
+spring.session.store-type=redis
+spring.session.redis.namespace=spring:session
+spring.session.timeout=30m
+```
+
+```java
+@Configuration
+@EnableRedisHttpSession(maxInactiveIntervalInSeconds = 1800)
+public class SessionConfig {
+    // Sessions stored in Redis, shared across all instances
+}
+```
+
+### Benefits
+
+<CardGroup cols={2}>
+  <Card title="Stateless Services" icon="server">
+    Any service instance can handle any request
+  </Card>
+  
+  <Card title="Horizontal Scaling" icon="up-right-and-down-left-from-center">
+    Add more instances without session affinity
+  </Card>
+  
+  <Card title="Session Persistence" icon="floppy-disk">
+    Sessions survive service restarts
+  </Card>
+  
+  <Card title="Fast Access" icon="bolt">
+    In-memory session lookups
+  </Card>
+</CardGroup>
+
+## Redis CLI Operations
+
+Interact with Redis directly:
+
+### Connect to Redis
+
+```bash
+# From host machine
+redis-cli -h localhost -p 6379
+
+# From Docker container
+docker exec -it rabbitmq redis-cli
+```
+
+### Common Commands
+
+```bash
+# List all keys
+KEYS *
+
+# Get specific key
+GET usuarios::123
+
+# Check if key exists
+EXISTS usuarios::123
+
+# Get TTL (time to live)
+TTL usuarios::123
+
+# Delete key
+DEL usuarios::123
+
+# Clear all caches
+FLUSHALL
+
+# Get cache statistics
+INFO stats
+```
+
+### Debugging Cache Issues
+
+```bash
+# Monitor all Redis commands in real-time
+MONITOR
+
+# List all usuario cache keys
+KEYS usuarios::*
+
+# Check memory usage
+INFO memory
+
+# View cache configuration
+CONFIG GET maxmemory*
+```
+
+## Cache Statistics
+
+Monitor cache performance:
+
+```java
+@Service
+public class CacheMetricsService {
+    
+    @Autowired
+    private CacheManager cacheManager;
+    
+    public Map<String, CacheStats> getCacheStats() {
+        Map<String, CacheStats> stats = new HashMap<>();
+        
+        cacheManager.getCacheNames().forEach(cacheName -> {
+            Cache cache = cacheManager.getCache(cacheName);
+            if (cache instanceof RedisCache) {
+                RedisCache redisCache = (RedisCache) cache;
+                // Get hits, misses, evictions
+                stats.put(cacheName, redisCache.getStatistics());
+            }
+        });
+        
+        return stats;
+    }
+}
+```
+
+## Performance Impact
+
+### Before Redis Caching
+
+```
+Endpoint: GET /cliente/profile
+Database Query: 45ms
+Serialization: 5ms
+Total: 50ms per request
+
+100 requests = 5000ms = 5 seconds
+```
+
+### After Redis Caching
+
+```
+Endpoint: GET /cliente/profile
+
+First request (cache miss):
+Database Query: 45ms
+Cache Write: 2ms
+Total: 47ms
+
+Subsequent requests (cache hit):
+Cache Read: 1ms
+Total: 1ms
+
+100 requests = 1 + (99 × 1) = 100ms = 0.1 seconds
+50x faster! 🚀
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Set Appropriate TTL" icon="clock">
+    Balance between freshness and cache benefits
+  </Card>
+  
+  <Card title="Use Specific Cache Names" icon="tag">
+    Separate caches for different data types
+  </Card>
+  
+  <Card title="Cache Immutable Data" icon="lock">
+    Static content, configuration, reference data
+  </Card>
+  
+  <Card title="Invalidate on Updates" icon="rotate">
+    Use @CacheEvict when data changes
+  </Card>
+  
+  <Card title="Monitor Cache Hit Rate" icon="chart-line">
+    Aim for >80% hit rate for cached data
+  </Card>
+  
+  <Card title="Set Memory Limits" icon="memory">
+    Configure maxmemory and eviction policy
+  </Card>
+</CardGroup>
+
+## Memory Management
+
+### Configure Max Memory
+
+```bash
+# Set maximum memory to 256MB
+redis-cli CONFIG SET maxmemory 256mb
+
+# Set eviction policy
+redis-cli CONFIG SET maxmemory-policy allkeys-lru
+```
+
+### Eviction Policies
+
+| Policy | Behavior |
+|--------|----------|
+| `noeviction` | Return errors when memory limit reached |
+| `allkeys-lru` | Evict least recently used keys first |
+| `allkeys-lfu` | Evict least frequently used keys first |
+| `volatile-lru` | Evict LRU keys with TTL set |
+| `volatile-ttl` | Evict keys with shortest TTL first |
+
+<Tip>
+For cache use cases, `allkeys-lru` is usually the best choice.
+</Tip>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Cache Not Working">
+    1. Verify Redis is running:
+       ```bash
+       docker ps | grep redis
+       ```
+    
+    2. Test Redis connection:
+       ```bash
+       redis-cli -h localhost -p 6379 ping
+       # Expected: PONG
+       ```
+    
+    3. Check service logs for Redis connection errors:
+       ```bash
+       docker logs user-service | grep -i redis
+       ```
+    
+    4. Verify @EnableCaching is present in configuration
+  </Accordion>
+  
+  <Accordion title="Stale Data in Cache">
+    1. Check TTL configuration:
+       ```bash
+       redis-cli TTL usuarios::123
+       ```
+    
+    2. Ensure @CacheEvict is called on updates:
+       ```java
+       @CacheEvict(value = "usuarios", key = "#id")
+       public void updateUser(Long id) { ... }
+       ```
+    
+    3. Manually clear cache if needed:
+       ```bash
+       redis-cli DEL usuarios::123
+       ```
+  </Accordion>
+  
+  <Accordion title="High Memory Usage">
+    1. Check current memory usage:
+       ```bash
+       redis-cli INFO memory
+       ```
+    
+    2. View largest keys:
+       ```bash
+       redis-cli --bigkeys
+       ```
+    
+    3. Reduce TTL or implement eviction policy
+    
+    4. Consider increasing Redis memory limit
+  </Accordion>
+</AccordionGroup>
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="User Service API" icon="user" href="/api-reference/user-service/users">
+    See Redis caching implementation
+  </Card>
+  
+  <Card title="Microservices" icon="cubes" href="/infrastructure/microservices">
+    Learn about all services using Redis
+  </Card>
+</CardGroup>

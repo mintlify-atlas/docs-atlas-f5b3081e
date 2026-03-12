@@ -1,0 +1,638 @@
+---
+title: 'Authentication'
+description: 'Endpoints for user authentication and registration'
+---
+
+## POST /auth/login
+
+Authenticate a user with email and password.
+
+### Request Body
+
+<ParamField body="correo" type="string" required>
+  User's email address
+</ParamField>
+
+<ParamField body="clave" type="string" required>
+  User's password
+</ParamField>
+
+### Response
+
+<ResponseField name="token" type="string">
+  JWT authentication token with user roles
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -X POST https://api.korofood.com/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "correo": "user@example.com",
+    "clave": "password123"
+  }'
+```
+
+### Example Response
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+### Error Response
+
+```json
+{
+  "error": "Credenciales inválidas"
+}
+```
+
+---
+
+## POST /auth/register
+
+Register a new user with optional profile image.
+
+### Request Headers
+
+<ParamField header="Content-Type" type="string" default="multipart/form-data">
+  Must be multipart/form-data for file upload
+</ParamField>
+
+### Request Body (Form Data)
+
+<ParamField body="nombres" type="string" required>
+  User's first name
+</ParamField>
+
+<ParamField body="apePaterno" type="string" required>
+  User's paternal last name
+</ParamField>
+
+<ParamField body="apeMaterno" type="string" required>
+  User's maternal last name
+</ParamField>
+
+<ParamField body="correo" type="string" required>
+  User's email address
+</ParamField>
+
+<ParamField body="clave" type="string" required>
+  User's password
+</ParamField>
+
+<ParamField body="tipoDoc" type="enum" required>
+  Type of document (DNI, CE, PASSPORT)
+</ParamField>
+
+<ParamField body="nroDoc" type="string" required>
+  Document number
+</ParamField>
+
+<ParamField body="telefono" type="string" required>
+  User's phone number
+</ParamField>
+
+<ParamField body="direccion" type="string" required>
+  User's address
+</ParamField>
+
+<ParamField body="imagenMultipart" type="file">
+  Profile image file (optional)
+</ParamField>
+
+### Response
+
+<ResponseField name="valor" type="boolean">
+  Indicates if registration was successful
+</ResponseField>
+
+<ResponseField name="mensaje" type="string">
+  Success or error message
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  User object if registration was successful
+  
+  <ResponseField name="idUsuario" type="integer">
+    User ID
+  </ResponseField>
+  
+  <ResponseField name="nombres" type="string">
+    User's first name
+  </ResponseField>
+  
+  <ResponseField name="correo" type="string">
+    User's email
+  </ResponseField>
+  
+  <ResponseField name="imagen" type="string">
+    URL of the uploaded profile image
+  </ResponseField>
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -X POST https://api.korofood.com/auth/register \
+  -H "Content-Type: multipart/form-data" \
+  -F "nombres=Juan" \
+  -F "apePaterno=Pérez" \
+  -F "apeMaterno=García" \
+  -F "correo=juan.perez@example.com" \
+  -F "clave=securePassword123" \
+  -F "tipoDoc=DNI" \
+  -F "nroDoc=12345678" \
+  -F "telefono=987654321" \
+  -F "direccion=Av. Principal 123" \
+  -F "imagenMultipart=@profile.jpg"
+```
+
+### Example Response
+
+```json
+{
+  "valor": true,
+  "mensaje": "Usuario registrado exitosamente",
+  "data": {
+    "idUsuario": 1,
+    "nombres": "Juan",
+    "apePaterno": "Pérez",
+    "apeMaterno": "García",
+    "correo": "juan.perez@example.com",
+    "imagen": "https://cloudinary.com/korofoods/users/abc123.jpg",
+    "tipoDoc": "DNI",
+    "nroDoc": "12345678",
+    "telefono": "987654321",
+    "direccion": "Av. Principal 123",
+    "fechaRegistro": "2026-03-12T10:30:00",
+    "activo": true
+  }
+}
+```
+
+---
+
+## POST /auth/github
+
+Authenticate or register a user using GitHub OAuth.
+
+### Query Parameters
+
+<ParamField query="code" type="string" required>
+  GitHub OAuth authorization code
+</ParamField>
+
+### Response
+
+<ResponseField name="usuarioExistente" type="boolean">
+  True if user already exists, false if new registration required
+</ResponseField>
+
+<ResponseField name="token" type="string">
+  JWT token if user exists
+</ResponseField>
+
+<ResponseField name="tempToken" type="string">
+  Temporary token for completing registration if user is new
+</ResponseField>
+
+<ResponseField name="socialUserDataDto" type="object">
+  GitHub user data
+  
+  <ResponseField name="name" type="string">
+    User's name from GitHub
+  </ResponseField>
+  
+  <ResponseField name="email" type="string">
+    User's email from GitHub
+  </ResponseField>
+  
+  <ResponseField name="avatar" type="string">
+    User's avatar URL from GitHub
+  </ResponseField>
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -X POST "https://api.korofood.com/auth/github?code=abc123xyz" \
+  -H "Content-Type: application/json"
+```
+
+### Example Response (Existing User)
+
+```json
+{
+  "usuarioExistente": true,
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "tempToken": null,
+  "socialUserDataDto": {
+    "name": "Juan Pérez",
+    "email": "juan@example.com",
+    "avatar": "https://avatars.githubusercontent.com/u/123456"
+  }
+}
+```
+
+### Example Response (New User)
+
+```json
+{
+  "usuarioExistente": false,
+  "token": null,
+  "tempToken": "temp_abc123...",
+  "socialUserDataDto": {
+    "name": "Juan Pérez",
+    "email": "juan@example.com",
+    "avatar": "https://avatars.githubusercontent.com/u/123456"
+  }
+}
+```
+
+---
+
+## POST /auth/google
+
+Authenticate or register a user using Google OAuth.
+
+### Request Body
+
+<ParamField body="idToken" type="string" required>
+  Google ID token from OAuth flow
+</ParamField>
+
+### Response
+
+<ResponseField name="usuarioExistente" type="boolean">
+  True if user already exists, false if new registration required
+</ResponseField>
+
+<ResponseField name="token" type="string">
+  JWT token if user exists
+</ResponseField>
+
+<ResponseField name="tempToken" type="string">
+  Temporary token for completing registration if user is new
+</ResponseField>
+
+<ResponseField name="socialUserDataDto" type="object">
+  Google user data
+  
+  <ResponseField name="name" type="string">
+    User's name from Google
+  </ResponseField>
+  
+  <ResponseField name="email" type="string">
+    User's email from Google
+  </ResponseField>
+  
+  <ResponseField name="avatar" type="string">
+    User's avatar URL from Google
+  </ResponseField>
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -X POST https://api.korofood.com/auth/google \
+  -H "Content-Type: application/json" \
+  -d '{
+    "idToken": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjE4MmU0..."
+  }'
+```
+
+### Example Response (Existing User)
+
+```json
+{
+  "usuarioExistente": true,
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "tempToken": null,
+  "socialUserDataDto": {
+    "name": "María González",
+    "email": "maria@gmail.com",
+    "avatar": "https://lh3.googleusercontent.com/a/abc123"
+  }
+}
+```
+
+### Example Response (New User)
+
+```json
+{
+  "usuarioExistente": false,
+  "token": null,
+  "tempToken": "temp_xyz789...",
+  "socialUserDataDto": {
+    "name": "María González",
+    "email": "maria@gmail.com",
+    "avatar": "https://lh3.googleusercontent.com/a/abc123"
+  }
+}
+```
+
+---
+
+## GET /auth/me
+
+Get the current authenticated user's information.
+
+### Request Headers
+
+<ParamField header="X-Username" type="string" required>
+  User's email address (from JWT token)
+</ParamField>
+
+### Response
+
+<ResponseField name="idUsuario" type="integer">
+  User ID
+</ResponseField>
+
+<ResponseField name="nombres" type="string">
+  User's first name
+</ResponseField>
+
+<ResponseField name="apePaterno" type="string">
+  User's paternal last name
+</ResponseField>
+
+<ResponseField name="apeMaterno" type="string">
+  User's maternal last name
+</ResponseField>
+
+<ResponseField name="correo" type="string">
+  User's email address
+</ResponseField>
+
+<ResponseField name="imagen" type="string">
+  URL of user's profile image
+</ResponseField>
+
+<ResponseField name="telefono" type="string">
+  User's phone number
+</ResponseField>
+
+<ResponseField name="direccion" type="string">
+  User's address
+</ResponseField>
+
+<ResponseField name="tipoDoc" type="string">
+  Type of document
+</ResponseField>
+
+<ResponseField name="nroDoc" type="string">
+  Document number
+</ResponseField>
+
+<ResponseField name="activo" type="boolean">
+  Whether the user account is active
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -X GET https://api.korofood.com/auth/me \
+  -H "X-Username: user@example.com" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+### Example Response
+
+```json
+{
+  "idUsuario": 1,
+  "nombres": "Juan",
+  "apePaterno": "Pérez",
+  "apeMaterno": "García",
+  "correo": "user@example.com",
+  "imagen": "https://cloudinary.com/korofoods/users/profile.jpg",
+  "telefono": "987654321",
+  "direccion": "Av. Principal 123",
+  "tipoDoc": "DNI",
+  "nroDoc": "12345678",
+  "activo": true
+}
+```
+
+---
+
+## GET /auth/{id}
+
+Get user profile information by ID.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  User ID
+</ParamField>
+
+### Response
+
+<ResponseField name="valor" type="boolean">
+  Indicates if request was successful
+</ResponseField>
+
+<ResponseField name="mensaje" type="string">
+  Success or error message
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  User profile information
+  
+  <ResponseField name="idUsuario" type="integer">
+    User ID
+  </ResponseField>
+  
+  <ResponseField name="nombres" type="string">
+    User's first name
+  </ResponseField>
+  
+  <ResponseField name="apePaterno" type="string">
+    User's paternal last name
+  </ResponseField>
+  
+  <ResponseField name="apeMaterno" type="string">
+    User's maternal last name
+  </ResponseField>
+  
+  <ResponseField name="correo" type="string">
+    User's email
+  </ResponseField>
+  
+  <ResponseField name="imagen" type="string">
+    Profile image URL
+  </ResponseField>
+  
+  <ResponseField name="telefono" type="string">
+    Phone number
+  </ResponseField>
+  
+  <ResponseField name="direccion" type="string">
+    Address
+  </ResponseField>
+  
+  <ResponseField name="tipoDoc" type="string">
+    Document type
+  </ResponseField>
+  
+  <ResponseField name="nroDoc" type="string">
+    Document number
+  </ResponseField>
+  
+  <ResponseField name="fechaRegistro" type="string">
+    Registration date
+  </ResponseField>
+  
+  <ResponseField name="distrito" type="string">
+    District name
+  </ResponseField>
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -X GET https://api.korofood.com/auth/1 \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+### Example Response
+
+```json
+{
+  "valor": true,
+  "mensaje": "Usuario encontrado",
+  "data": {
+    "idUsuario": 1,
+    "nombres": "Juan",
+    "apePaterno": "Pérez",
+    "apeMaterno": "García",
+    "correo": "juan.perez@example.com",
+    "imagen": "https://cloudinary.com/korofoods/users/profile.jpg",
+    "telefono": "987654321",
+    "direccion": "Av. Principal 123",
+    "tipoDoc": "DNI",
+    "nroDoc": "12345678",
+    "fechaRegistro": "2026-03-12T10:30:00",
+    "distrito": "Lima"
+  }
+}
+```
+
+---
+
+## POST /auth/social/register
+
+Complete registration for users who signed up via GitHub or Google OAuth.
+
+### Request Body
+
+<ParamField body="tempToken" type="string" required>
+  Temporary token received from /auth/github or /auth/google
+</ParamField>
+
+<ParamField body="nombres" type="string" required>
+  User's first name
+</ParamField>
+
+<ParamField body="correo" type="string" required>
+  User's email (from social provider)
+</ParamField>
+
+<ParamField body="imagen" type="string" required>
+  Profile image URL (from social provider)
+</ParamField>
+
+<ParamField body="provider" type="string" required>
+  Social provider name ("github" or "google")
+</ParamField>
+
+<ParamField body="apePaterno" type="string" required>
+  User's paternal last name
+</ParamField>
+
+<ParamField body="apeMaterno" type="string" required>
+  User's maternal last name
+</ParamField>
+
+<ParamField body="tipoDocumento" type="enum" required>
+  Type of document (DNI, CE, PASSPORT)
+</ParamField>
+
+<ParamField body="nroDoc" type="string" required>
+  Document number
+</ParamField>
+
+<ParamField body="telefono" type="string" required>
+  Phone number
+</ParamField>
+
+<ParamField body="direccion" type="string" required>
+  Address
+</ParamField>
+
+<ParamField body="idDistrito" type="integer" required>
+  District ID
+</ParamField>
+
+<ParamField body="clave" type="string" required>
+  Password for the account
+</ParamField>
+
+### Response
+
+<ResponseField name="valor" type="boolean">
+  Indicates if registration was successful
+</ResponseField>
+
+<ResponseField name="mensaje" type="string">
+  Success or error message
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Registered user data
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -X POST https://api.korofood.com/auth/social/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tempToken": "temp_abc123...",
+    "nombres": "Juan",
+    "correo": "juan@example.com",
+    "imagen": "https://avatars.githubusercontent.com/u/123456",
+    "provider": "github",
+    "apePaterno": "Pérez",
+    "apeMaterno": "García",
+    "tipoDocumento": "DNI",
+    "nroDoc": "12345678",
+    "telefono": "987654321",
+    "direccion": "Av. Principal 123",
+    "idDistrito": 1,
+    "clave": "securePassword123"
+  }'
+```
+
+### Example Response
+
+```json
+{
+  "valor": true,
+  "mensaje": "Registro completado exitosamente",
+  "data": {
+    "idUsuario": 1,
+    "nombres": "Juan",
+    "apePaterno": "Pérez",
+    "apeMaterno": "García",
+    "correo": "juan@example.com",
+    "imagen": "https://avatars.githubusercontent.com/u/123456",
+    "activo": true
+  }
+}
+```

@@ -1,0 +1,48 @@
+---
+title: 'Chatbot'
+description: 'AI-powered chatbot conversation endpoint'
+---
+
+## POST /chatbot/conversacion
+
+Send a prompt to the AI chatbot and receive a formatted response.
+
+This endpoint integrates with Google's Gemini AI service to provide intelligent conversational responses for customer support and inquiries.
+
+### Request Body
+
+<ParamField body="prompt" type="string" required>
+  The user's message or question to send to the chatbot
+</ParamField>
+
+### Response
+
+Returns a formatted string response from the Gemini AI service.
+
+### Example Request
+
+```bash
+curl -X POST https://api.korofood.com/chatbot/conversacion \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "¿Cuáles son los horarios de entrega?"
+  }'
+```
+
+### Example Response
+
+```text
+Nuestros horarios de entrega son de lunes a viernes de 9:00 AM a 8:00 PM, y los fines de semana de 10:00 AM a 6:00 PM. Los pedidos realizados después de las 6:00 PM se entregarán al día siguiente.
+```
+
+### Use Cases
+
+- Customer support inquiries
+- Product information questions
+- Order status queries
+- General assistance
+- Menu recommendations
+
+### Integration Notes
+
+This endpoint uses the Gemini AI service for natural language processing. The response is formatted to provide clear and helpful information to users.

@@ -1,0 +1,383 @@
+---
+title: 'OAuth 2.0 Authentication'
+description: 'Understand OAuth 2.0 implementation in KoroFood Restaurant Management System'
+icon: 'lock'
+---
+
+## Overview
+
+KoroFood's Restaurant Management System implements OAuth 2.0 protocol for secure authentication with external providers. The system supports GitHub and Google as OAuth providers, allowing users to authenticate without creating a separate password.
+
+## OAuth 2.0 Flow
+
+The OAuth 2.0 Authorization Code flow is implemented for both GitHub and Google authentication:
+
+<Steps>
+  <Step title="Authorization Request">
+    Client redirects user to OAuth provider's authorization page
+  </Step>
+  <Step title="User Consent">
+    User grants permission for the application to access their profile information
+  </Step>
+  <Step title="Authorization Code">
+    OAuth provider redirects back to the application with an authorization code
+  </Step>
+  <Step title="Token Exchange">
+    Application exchanges the authorization code for an access token
+  </Step>
+  <Step title="User Information Retrieval">
+    Application uses access token to fetch user profile information
+  </Step>
+  <Step title="JWT Token Generation">
+    System generates a JWT token for the authenticated user
+  </Step>
+</Steps>
+
+## OAuth Providers
+
+The system supports two OAuth 2.0 providers:
+
+<CardGroup cols={2}>
+  <Card title="GitHub OAuth" icon="github">
+    Authenticate users via their GitHub accounts
+  </Card>
+  <Card title="Google OAuth" icon="google">
+    Authenticate users via their Google accounts
+  </Card>
+</CardGroup>
+
+## GitHub OAuth Configuration
+
+The GitHub OAuth service is configured with client credentials:
+
+```java service/GithubService.java
+@Service
+public class GithubService {
+
+    @Value("${github.clientId}")
+    private String clientId;
+
+    @Value("${github.clientSecret}")
+    private String clientSecret;
+
+    private final WebClient webClient;
+
+    public GithubService() {
+        this.webClient = WebClient.builder()
+                .baseUrl("https://github.com")
+                .build();
+    }
+}
+```
+
+### Configuration Properties
+
+<ParamField path="github.clientId" type="string" required>
+  GitHub OAuth application client ID
+</ParamField>
+
+<ParamField path="github.clientSecret" type="string" required>
+  GitHub OAuth application client secret
+</ParamField>
+
+<Note>
+  Register your application at [GitHub Developer Settings](https://github.com/settings/developers) to obtain OAuth credentials.
+</Note>
+
+## Google OAuth Configuration
+
+The Google OAuth service uses the Google ID Token verification approach:
+
+```java service/GoogleService.java
+@Service
+public class GoogleService {
+
+    @Value("${google.clientId}")
+    private String clientId;
+
+    public GoogleUserDto verifyGoogleToken(String idTokenString) {
+        try {
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
+                    new NetHttpTransport(),
+                    new GsonFactory())
+                    .setAudience(Collections.singletonList(clientId))
+                    .build();
+
+            GoogleIdToken idToken = verifier.verify(idTokenString);
+            // ... process token
+        }
+    }
+}
+```
+
+### Configuration Properties
+
+<ParamField path="google.clientId" type="string" required>
+  Google OAuth 2.0 client ID from Google Cloud Console
+</ParamField>
+
+<Note>
+  Configure OAuth 2.0 credentials in [Google Cloud Console](https://console.cloud.google.com/apis/credentials) to obtain the client ID.
+</Note>
+
+## Token Exchange Process
+
+### GitHub Token Exchange
+
+The GitHub OAuth flow exchanges an authorization code for an access token:
+
+```java service/GithubService.java
+public GithubUserDto loginWithGithub(String code) {
+    // Exchange authorization code for access token
+    Map tokenResponse = webClient.post()
+            .uri("https://github.com/login/oauth/access_token")
+            .header("Accept", "application/json")
+            .bodyValue(Map.of(
+                    "client_id", clientId,
+                    "client_secret", clientSecret,
+                    "code", code
+            ))
+            .retrieve()
+            .bodyToMono(Map.class)
+            .block();
+
+    String accessToken = (String) tokenResponse.get("access_token");
+
+    // Fetch user information
+    Map user = webClient.get()
+            .uri("https://api.github.com/user")
+            .header("Authorization", "Bearer " + accessToken)
+            .retrieve()
+            .bodyToMono(Map.class)
+            .block();
+
+    // Fetch user emails
+    var emails = webClient.get()
+            .uri("https://api.github.com/user/emails")
+            .header("Authorization", "Bearer " + accessToken)
+            .retrieve()
+            .bodyToMono(List.class)
+            .block();
+
+    return new GithubUserDto(
+            (String) user.get("name"),
+            email,
+            (String) user.get("avatar_url")
+    );
+}
+```
+
+<Warning>
+  Never expose client secrets in client-side code. All OAuth token exchanges must happen on the server side.
+</Warning>
+
+### Google Token Verification
+
+Google uses ID token verification instead of traditional token exchange:
+
+```java service/GoogleService.java
+public GoogleUserDto verifyGoogleToken(String idTokenString) {
+    try {
+        GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
+                new NetHttpTransport(),
+                new GsonFactory())
+                .setAudience(Collections.singletonList(clientId))
+                .build();
+
+        GoogleIdToken idToken = verifier.verify(idTokenString);
+
+        if (idToken != null) {
+            GoogleIdToken.Payload payload = idToken.getPayload();
+
+            String email = payload.getEmail();
+            String name = (String) payload.get("name");
+            String pictureUrl = (String) payload.get("picture");
+
+            return new GoogleUserDto(name, email, pictureUrl);
+        } else {
+            throw new RuntimeException("Token de Google inválido");
+        }
+    } catch (Exception e) {
+        throw new RuntimeException("Error al verificar token de Google: " + e.getMessage());
+    }
+}
+```
+
+## API Endpoints
+
+### GitHub Authentication
+
+```http
+POST /auth/github?code={authorization_code}
+```
+
+<ParamField query="code" type="string" required>
+  Authorization code received from GitHub OAuth callback
+</ParamField>
+
+**Response:**
+
+```json
+{
+  "usuarioExistente": false,
+  "token": null,
+  "tempToken": "temp_eyJhbGc...",
+  "socialUserDataDto": {
+    "nombre": "John Doe",
+    "email": "john@example.com",
+    "avatar": "https://avatars.githubusercontent.com/u/12345",
+    "provider": "github"
+  }
+}
+```
+
+### Google Authentication
+
+```http
+POST /auth/google
+Content-Type: application/json
+```
+
+**Request Body:**
+
+```json
+{
+  "idToken": "eyJhbGciOiJSUzI1NiIsImtpZCI6..."
+}
+```
+
+<ParamField body="idToken" type="string" required>
+  Google ID token received from Google Sign-In client library
+</ParamField>
+
+**Response:**
+
+```json
+{
+  "usuarioExistente": true,
+  "token": "eyJhbGciOiJIUzI1NiJ9...",
+  "tempToken": null,
+  "socialUserDataDto": null
+}
+```
+
+## Response Structure
+
+OAuth authentication endpoints return a `SocialAuthResponse` object:
+
+<ResponseField name="usuarioExistente" type="boolean" required>
+  Indicates if the user already has an account in the system
+  - `true`: User exists, `token` contains JWT for immediate access
+  - `false`: New user, `tempToken` provided for registration completion
+</ResponseField>
+
+<ResponseField name="token" type="string">
+  JWT token for existing users (null for new users)
+</ResponseField>
+
+<ResponseField name="tempToken" type="string">
+  Temporary token for new users to complete registration (null for existing users)
+</ResponseField>
+
+<ResponseField name="socialUserDataDto" type="object">
+  User profile information from OAuth provider (null for existing users)
+  
+  <ResponseField name="nombre" type="string">
+    User's full name from OAuth provider
+  </ResponseField>
+  
+  <ResponseField name="email" type="string">
+    User's email address from OAuth provider
+  </ResponseField>
+  
+  <ResponseField name="avatar" type="string">
+    URL to user's profile picture
+  </ResponseField>
+  
+  <ResponseField name="provider" type="string">
+    OAuth provider name: "github" or "google"
+  </ResponseField>
+</ResponseField>
+
+## User Flow Scenarios
+
+### Existing User
+
+<Steps>
+  <Step title="OAuth Authentication">
+    User authenticates via GitHub or Google
+  </Step>
+  <Step title="Account Verification">
+    System finds existing account with matching email
+  </Step>
+  <Step title="JWT Token Issued">
+    System returns JWT token in response (`usuarioExistente: true`)
+  </Step>
+  <Step title="Access Granted">
+    User can immediately access protected resources
+  </Step>
+</Steps>
+
+### New User
+
+<Steps>
+  <Step title="OAuth Authentication">
+    User authenticates via GitHub or Google
+  </Step>
+  <Step title="No Account Found">
+    System doesn't find existing account with matching email
+  </Step>
+  <Step title="Temporary Token Issued">
+    System returns temporary token and user data (`usuarioExistente: false`)
+  </Step>
+  <Step title="Registration Completion">
+    User must complete registration with additional information
+  </Step>
+  <Step title="Final JWT Issued">
+    After registration, system issues permanent JWT token
+  </Step>
+</Steps>
+
+For details on completing social registration, see the [Social Login](/authentication/social-login) documentation.
+
+## Security Considerations
+
+<Warning>
+  **Client Secrets:** Never expose OAuth client secrets in client-side code. Keep them in server-side environment variables.
+</Warning>
+
+<Warning>
+  **HTTPS Required:** OAuth flows require HTTPS in production to prevent token interception.
+</Warning>
+
+<Note>
+  **State Parameter:** Consider implementing the OAuth state parameter to prevent CSRF attacks in production deployments.
+</Note>
+
+## Error Handling
+
+<CodeGroup>
+```json 400 Bad Request
+{
+  "error": "Token de Google requerido"
+}
+```
+
+```json 500 Internal Server Error (GitHub)
+{
+  "¡Error' ": "Error en autenticación GitHub: No se pudo obtener el access token"
+}
+```
+
+```json 500 Internal Server Error (Google)
+{
+  "¡Error' ": "Error en autenticación Google: Token de Google inválido"
+}
+```
+</CodeGroup>
+
+## Next Steps
+
+<Card title="Social Login Implementation" icon="users" href="/authentication/social-login">
+  Learn how to implement GitHub and Google login in your client application
+</Card>

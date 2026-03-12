@@ -1,0 +1,239 @@
+---
+title: 'Themes'
+description: 'Manage event themes in the KoroFood system'
+---
+
+## Create Theme
+
+<api-endpoint method="POST" endpoint="/tematicas" />
+
+Creates a new theme for events.
+
+### Request Body
+
+<ParamField body="nombre" type="string" required>
+  Theme name (max 100 characters)
+</ParamField>
+
+### Response
+
+<ResponseField name="idTematica" type="integer">
+  Unique identifier for the theme
+</ResponseField>
+
+<ResponseField name="nombre" type="string">
+  Theme name
+</ResponseField>
+
+<ResponseField name="activo" type="boolean">
+  Whether the theme is active
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -X POST https://api.korofood.com/tematicas \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nombre": "Eventos Corporativos"
+  }'
+```
+
+### Example Response
+
+```json
+{
+  "idTematica": 1,
+  "nombre": "Eventos Corporativos",
+  "activo": true
+}
+```
+
+---
+
+## List All Themes
+
+<api-endpoint method="GET" endpoint="/tematicas" />
+
+Retrieves a list of all themes in the system.
+
+### Response
+
+Returns an array of theme objects.
+
+<ResponseField name="idTematica" type="integer">
+  Theme ID
+</ResponseField>
+
+<ResponseField name="nombre" type="string">
+  Theme name
+</ResponseField>
+
+<ResponseField name="activo" type="boolean">
+  Whether the theme is active
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -X GET https://api.korofood.com/tematicas
+```
+
+### Example Response
+
+```json
+[
+  {
+    "idTematica": 1,
+    "nombre": "Eventos Corporativos",
+    "activo": true
+  },
+  {
+    "idTematica": 2,
+    "nombre": "Celebraciones Familiares",
+    "activo": true
+  },
+  {
+    "idTematica": 3,
+    "nombre": "Eventos Sociales",
+    "activo": false
+  }
+]
+```
+
+---
+
+## List Active Themes
+
+<api-endpoint method="GET" endpoint="/tematicas/activas" />
+
+Retrieves a list of all active themes.
+
+### Response
+
+Returns an array of active theme objects.
+
+### Example Request
+
+```bash
+curl -X GET https://api.korofood.com/tematicas/activas
+```
+
+### Example Response
+
+```json
+[
+  {
+    "idTematica": 1,
+    "nombre": "Eventos Corporativos",
+    "activo": true
+  },
+  {
+    "idTematica": 2,
+    "nombre": "Celebraciones Familiares",
+    "activo": true
+  }
+]
+```
+
+---
+
+## Get Theme by ID
+
+<api-endpoint method="GET" endpoint="/tematicas/{id}" />
+
+Retrieves a specific theme by its ID.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  Theme ID
+</ParamField>
+
+### Response
+
+Returns the theme object.
+
+### Example Request
+
+```bash
+curl -X GET https://api.korofood.com/tematicas/1
+```
+
+### Example Response
+
+```json
+{
+  "idTematica": 1,
+  "nombre": "Eventos Corporativos",
+  "activo": true
+}
+```
+
+---
+
+## Update Theme
+
+<api-endpoint method="PUT" endpoint="/tematicas/{id}" />
+
+Updates an existing theme.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  Theme ID to update
+</ParamField>
+
+### Request Body
+
+<ParamField body="nombre" type="string" required>
+  Updated theme name (max 100 characters)
+</ParamField>
+
+### Response
+
+Returns the updated theme object.
+
+### Example Request
+
+```bash
+curl -X PUT https://api.korofood.com/tematicas/1 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nombre": "Eventos Empresariales"
+  }'
+```
+
+### Example Response
+
+```json
+{
+  "idTematica": 1,
+  "nombre": "Eventos Empresariales",
+  "activo": true
+}
+```
+
+---
+
+## Delete Theme
+
+<api-endpoint method="DELETE" endpoint="/tematicas/{id}" />
+
+Deletes a theme from the system.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  Theme ID to delete
+</ParamField>
+
+### Response
+
+Returns 204 No Content on successful deletion.
+
+### Example Request
+
+```bash
+curl -X DELETE https://api.korofood.com/tematicas/1
+```

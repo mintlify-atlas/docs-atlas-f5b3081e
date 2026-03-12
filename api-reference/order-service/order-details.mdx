@@ -1,0 +1,483 @@
+---
+title: 'Order Details'
+description: 'Manage order details, delivery status, and payment processing'
+---
+
+## Get Order Details
+
+<api method="GET" endpoint="/pedido/list/{pedidoId}">
+  Retrieve all items (details) for a specific order.
+</api>
+
+### Path Parameters
+
+<ParamField path="pedidoId" type="Integer" required>
+  Order ID to retrieve details for
+</ParamField>
+
+### Response
+
+<ResponseField name="valor" type="boolean">
+  Indicates if the operation was successful
+</ResponseField>
+
+<ResponseField name="data" type="List<DetallePedidoResponse>">
+  List of order detail items
+  
+  <ResponseField name="idDetalle" type="Integer">
+    Detail ID
+  </ResponseField>
+  
+  <ResponseField name="nombrePlato" type="String">
+    Dish name
+  </ResponseField>
+  
+  <ResponseField name="cantidad" type="Integer">
+    Quantity ordered
+  </ResponseField>
+  
+  <ResponseField name="precioUnitario" type="Double">
+    Unit price
+  </ResponseField>
+  
+  <ResponseField name="subtotal" type="Double">
+    Line item subtotal
+  </ResponseField>
+  
+  <ResponseField name="estado" type="String">
+    Item status
+  </ResponseField>
+  
+  <ResponseField name="observaciones" type="String">
+    Special instructions
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="mensaje" type="String">
+  Response message
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -X GET "https://api.korofood.com/pedido/list/456" \
+  -H "Content-Type: application/json"
+```
+
+### Example Response
+
+```json
+{
+  "valor": true,
+  "data": [
+    {
+      "idDetalle": 789,
+      "nombrePlato": "Ceviche de Pescado",
+      "cantidad": 2,
+      "precioUnitario": 15.99,
+      "subtotal": 31.98,
+      "estado": "PENDIENTE",
+      "observaciones": "Sin cebolla"
+    },
+    {
+      "idDetalle": 790,
+      "nombrePlato": "Lomo Saltado",
+      "cantidad": 1,
+      "precioUnitario": 18.50,
+      "subtotal": 18.50,
+      "estado": "EN_PREPARACION",
+      "observaciones": null
+    }
+  ],
+  "mensaje": "Detalles obtenidos exitosamente"
+}
+```
+
+---
+
+## Mark Item as Delivered
+
+<api method="PUT" endpoint="/pedido/ent/{idDetalle}">
+  Mark a specific order item as delivered.
+</api>
+
+### Path Parameters
+
+<ParamField path="idDetalle" type="Integer" required>
+  Order detail ID to mark as delivered
+</ParamField>
+
+### Response
+
+<ResponseField name="valor" type="boolean">
+  Indicates if the operation was successful
+</ResponseField>
+
+<ResponseField name="data" type="DetallePedido">
+  Updated order detail object
+  
+  <ResponseField name="idDetalle" type="Integer">
+    Detail ID
+  </ResponseField>
+  
+  <ResponseField name="estado" type="String">
+    Updated status (ENTREGADO)
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="mensaje" type="String">
+  Response message
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -X PUT "https://api.korofood.com/pedido/ent/789" \
+  -H "Content-Type: application/json"
+```
+
+### Example Response
+
+```json
+{
+  "valor": true,
+  "data": {
+    "idDetalle": 789,
+    "idPedido": 456,
+    "idPlato": 12,
+    "cantidad": 2,
+    "estado": "ENTREGADO"
+  },
+  "mensaje": "Estado actualizado a entregado"
+}
+```
+
+---
+
+## Cancel Order Item
+
+<api method="PUT" endpoint="/pedido/can/{idDetalle}">
+  Cancel a specific order item.
+</api>
+
+### Path Parameters
+
+<ParamField path="idDetalle" type="Integer" required>
+  Order detail ID to cancel
+</ParamField>
+
+### Response
+
+<ResponseField name="valor" type="boolean">
+  Indicates if the operation was successful
+</ResponseField>
+
+<ResponseField name="data" type="DetallePedido">
+  Updated order detail object
+  
+  <ResponseField name="idDetalle" type="Integer">
+    Detail ID
+  </ResponseField>
+  
+  <ResponseField name="estado" type="String">
+    Updated status (CANCELADO)
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="mensaje" type="String">
+  Response message
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -X PUT "https://api.korofood.com/pedido/can/789" \
+  -H "Content-Type: application/json"
+```
+
+### Example Response
+
+```json
+{
+  "valor": true,
+  "data": {
+    "idDetalle": 789,
+    "idPedido": 456,
+    "idPlato": 12,
+    "cantidad": 2,
+    "estado": "CANCELADO"
+  },
+  "mensaje": "Item cancelado exitosamente"
+}
+```
+
+---
+
+## Get Customer Information
+
+<api method="GET" endpoint="/pedido/cliente/{idPedido}">
+  Retrieve customer information associated with an order.
+</api>
+
+### Path Parameters
+
+<ParamField path="idPedido" type="Integer" required>
+  Order ID to retrieve customer information for
+</ParamField>
+
+### Response
+
+<ResponseField name="valor" type="boolean">
+  Indicates if the operation was successful
+</ResponseField>
+
+<ResponseField name="data" type="DetallePedidoUsuarioResponse">
+  Customer information
+  
+  <ResponseField name="idUsuario" type="Integer">
+    User ID
+  </ResponseField>
+  
+  <ResponseField name="nombre" type="String">
+    Customer name
+  </ResponseField>
+  
+  <ResponseField name="email" type="String">
+    Customer email
+  </ResponseField>
+  
+  <ResponseField name="telefono" type="String">
+    Customer phone number
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="mensaje" type="String">
+  Response message
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -X GET "https://api.korofood.com/pedido/cliente/456" \
+  -H "Content-Type: application/json"
+```
+
+### Example Response
+
+```json
+{
+  "valor": true,
+  "data": {
+    "idUsuario": 123,
+    "nombre": "Juan Pérez",
+    "email": "juan.perez@example.com",
+    "telefono": "+51 987654321"
+  },
+  "mensaje": "Cliente obtenido exitosamente"
+}
+```
+
+---
+
+## Get Waiter Information
+
+<api method="GET" endpoint="/pedido/mesero/{idPedido}">
+  Retrieve waiter information associated with an order.
+</api>
+
+### Path Parameters
+
+<ParamField path="idPedido" type="Integer" required>
+  Order ID to retrieve waiter information for
+</ParamField>
+
+### Response
+
+<ResponseField name="valor" type="boolean">
+  Indicates if the operation was successful
+</ResponseField>
+
+<ResponseField name="data" type="DetallePedidoMeseroResponse">
+  Waiter information
+  
+  <ResponseField name="idMesero" type="Integer">
+    Waiter ID
+  </ResponseField>
+  
+  <ResponseField name="nombre" type="String">
+    Waiter name
+  </ResponseField>
+  
+  <ResponseField name="turno" type="String">
+    Waiter shift
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="mensaje" type="String">
+  Response message
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -X GET "https://api.korofood.com/pedido/mesero/456" \
+  -H "Content-Type: application/json"
+```
+
+### Example Response
+
+```json
+{
+  "valor": true,
+  "data": {
+    "idMesero": 45,
+    "nombre": "María González",
+    "turno": "TARDE"
+  },
+  "mensaje": "Mesero obtenido exitosamente"
+}
+```
+
+---
+
+## Process Payment
+
+<api method="GET" endpoint="/pedido/procederPago">
+  Get payment details for an order to proceed with payment.
+</api>
+
+### Query Parameters
+
+<ParamField query="idPedido" type="Integer" required>
+  Order ID to process payment for
+</ParamField>
+
+### Response
+
+<ResponseField name="valor" type="boolean">
+  Indicates if the operation was successful
+</ResponseField>
+
+<ResponseField name="data" type="DetallePedidoPagar">
+  Payment details
+  
+  <ResponseField name="idPedido" type="Integer">
+    Order ID
+  </ResponseField>
+  
+  <ResponseField name="subtotal" type="Double">
+    Subtotal amount
+  </ResponseField>
+  
+  <ResponseField name="impuestos" type="Double">
+    Tax amount
+  </ResponseField>
+  
+  <ResponseField name="total" type="Double">
+    Total amount to pay
+  </ResponseField>
+  
+  <ResponseField name="items" type="List">
+    List of order items
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="mensaje" type="String">
+  Response message
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -X GET "https://api.korofood.com/pedido/procederPago?idPedido=456" \
+  -H "Content-Type: application/json"
+```
+
+### Example Response
+
+```json
+{
+  "valor": true,
+  "data": {
+    "idPedido": 456,
+    "subtotal": 50.48,
+    "impuestos": 9.09,
+    "total": 59.57,
+    "items": [
+      {
+        "nombrePlato": "Ceviche de Pescado",
+        "cantidad": 2,
+        "subtotal": 31.98
+      },
+      {
+        "nombrePlato": "Lomo Saltado",
+        "cantidad": 1,
+        "subtotal": 18.50
+      }
+    ]
+  },
+  "mensaje": "Detalles de pago obtenidos"
+}
+```
+
+---
+
+## Mark Order as Paid
+
+<api method="PUT" endpoint="/pedido/estadoPagado">
+  Mark an order as paid after payment has been processed.
+</api>
+
+### Query Parameters
+
+<ParamField query="idPedido" type="Integer" required>
+  Order ID to mark as paid
+</ParamField>
+
+### Response
+
+<ResponseField name="valor" type="boolean">
+  Indicates if the operation was successful
+</ResponseField>
+
+<ResponseField name="data" type="Pedido">
+  Updated order object
+  
+  <ResponseField name="idPedido" type="Integer">
+    Order ID
+  </ResponseField>
+  
+  <ResponseField name="estado" type="EstadoPedido">
+    Updated order status (PAGADO)
+  </ResponseField>
+  
+  <ResponseField name="fechaPago" type="LocalDateTime">
+    Payment timestamp
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="mensaje" type="String">
+  Response message
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -X PUT "https://api.korofood.com/pedido/estadoPagado?idPedido=456" \
+  -H "Content-Type: application/json"
+```
+
+### Example Response
+
+```json
+{
+  "valor": true,
+  "data": {
+    "idPedido": 456,
+    "estado": "PAGADO",
+    "fechaPago": "2026-03-12T15:45:00",
+    "total": 59.57
+  },
+  "mensaje": "Pedido marcado como pagado exitosamente"
+}
+```

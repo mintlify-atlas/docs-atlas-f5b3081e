@@ -1,0 +1,269 @@
+---
+title: 'Table Management'
+description: 'Update and manage table operations'
+---
+
+## Update Table
+
+<api-endpoint method="PUT" endpoint="/mesa/{id}" />
+
+Update an existing table's information.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  Table ID to update
+</ParamField>
+
+### Request Body
+
+<ParamField body="numeroMesa" type="integer" required>
+  Table number (must be positive)
+</ParamField>
+
+<ParamField body="capacidad" type="integer" required>
+  Table capacity (1-20 persons)
+</ParamField>
+
+<ParamField body="zona" type="string" required>
+  Table zone: "Z1" or "Z2"
+</ParamField>
+
+<ParamField body="estado" type="string" required>
+  Table status: "LIBRE", "ASIGNADA", or "OCUPADA"
+</ParamField>
+
+### Response
+
+<ResponseField name="idMesa" type="integer">
+  Table ID
+</ResponseField>
+
+<ResponseField name="numeroMesa" type="integer">
+  Updated table number
+</ResponseField>
+
+<ResponseField name="capacidad" type="integer">
+  Updated capacity
+</ResponseField>
+
+<ResponseField name="zona" type="string">
+  Updated zone
+</ResponseField>
+
+<ResponseField name="estado" type="string">
+  Updated status
+</ResponseField>
+
+<ResponseField name="activo" type="boolean">
+  Active status
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X PUT https://api.korofood.com/mesa/1 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "numeroMesa": 1,
+    "capacidad": 6,
+    "zona": "Z1",
+    "estado": "LIBRE"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "idMesa": 1,
+  "numeroMesa": 1,
+  "capacidad": 6,
+  "zona": "Z1",
+  "zonaDescripcion": "Zona 1",
+  "estado": "LIBRE",
+  "estadoDescripcion": "Libre",
+  "activo": true
+}
+```
+</ResponseExample>
+
+## Change Table Status
+
+<api-endpoint method="PATCH" endpoint="/mesa/{id}/estado/{nuevoEstado}" />
+
+Change the status of a table.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  Table ID
+</ParamField>
+
+<ParamField path="nuevoEstado" type="string" required>
+  New status: "LIBRE", "ASIGNADA", or "OCUPADA"
+</ParamField>
+
+### Response
+
+<ResponseField name="idMesa" type="integer">
+  Table ID
+</ResponseField>
+
+<ResponseField name="estado" type="string">
+  Updated status
+</ResponseField>
+
+<ResponseField name="estadoDescripcion" type="string">
+  Updated status description
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X PATCH https://api.korofood.com/mesa/1/estado/OCUPADA
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "idMesa": 1,
+  "numeroMesa": 1,
+  "capacidad": 4,
+  "zona": "Z1",
+  "zonaDescripcion": "Zona 1",
+  "estado": "OCUPADA",
+  "estadoDescripcion": "Ocupada",
+  "activo": true
+}
+```
+</ResponseExample>
+
+## List Tables by Zone
+
+<api-endpoint method="GET" endpoint="/mesa/zona/{zona}" />
+
+Retrieve all tables in a specific zone.
+
+### Path Parameters
+
+<ParamField path="zona" type="string" required>
+  Zone to filter by: "Z1" or "Z2"
+</ParamField>
+
+### Response
+
+<ResponseField name="data" type="array">
+  Array of table objects in the specified zone
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl https://api.korofood.com/mesa/zona/Z1
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+[
+  {
+    "idMesa": 1,
+    "numeroMesa": 1,
+    "capacidad": 4,
+    "zona": "Z1",
+    "zonaDescripcion": "Zona 1",
+    "estado": "LIBRE",
+    "estadoDescripcion": "Libre",
+    "activo": true
+  },
+  {
+    "idMesa": 2,
+    "numeroMesa": 2,
+    "capacidad": 6,
+    "zona": "Z1",
+    "zonaDescripcion": "Zona 1",
+    "estado": "OCUPADA",
+    "estadoDescripcion": "Ocupada",
+    "activo": true
+  }
+]
+```
+</ResponseExample>
+
+## List Tables by Status
+
+<api-endpoint method="GET" endpoint="/mesa/estado/{estado}" />
+
+Retrieve all tables with a specific status.
+
+### Path Parameters
+
+<ParamField path="estado" type="string" required>
+  Status to filter by: "LIBRE", "ASIGNADA", or "OCUPADA"
+</ParamField>
+
+### Response
+
+<ResponseField name="data" type="array">
+  Array of table objects with the specified status
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl https://api.korofood.com/mesa/estado/LIBRE
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+[
+  {
+    "idMesa": 1,
+    "numeroMesa": 1,
+    "capacidad": 4,
+    "zona": "Z1",
+    "zonaDescripcion": "Zona 1",
+    "estado": "LIBRE",
+    "estadoDescripcion": "Libre",
+    "activo": true
+  },
+  {
+    "idMesa": 5,
+    "numeroMesa": 5,
+    "capacidad": 2,
+    "zona": "Z2",
+    "zonaDescripcion": "Zona 2",
+    "estado": "LIBRE",
+    "estadoDescripcion": "Libre",
+    "activo": true
+  }
+]
+```
+</ResponseExample>
+
+## Delete Table
+
+<api-endpoint method="DELETE" endpoint="/mesa/{id}" />
+
+Delete a table (soft delete - marks as inactive).
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  Table ID to delete
+</ParamField>
+
+### Response
+
+Returns HTTP 204 No Content on success.
+
+<RequestExample>
+```bash cURL
+curl -X DELETE https://api.korofood.com/mesa/1
+```
+</RequestExample>
+
+<ResponseExample>
+```text
+HTTP/1.1 204 No Content
+```
+</ResponseExample>

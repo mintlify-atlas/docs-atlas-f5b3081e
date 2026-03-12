@@ -1,0 +1,389 @@
+---
+title: 'Error Handling'
+description: 'Understanding error responses and status codes in the KoroFood API'
+---
+
+## Standard Error Response Format
+
+The KoroFood API uses a consistent error response structure across all microservices through the `ResultadoResponse` pattern.
+
+### ResultadoResponse Structure
+
+All API responses follow this standardized format:
+
+```json
+{
+  "valor": boolean,
+  "mensaje": "string",
+  "data": object | null
+}
+```
+
+<ResponseField name="valor" type="boolean" required>
+  Indicates whether the operation was successful.
+  - `true`: Operation completed successfully
+  - `false`: Operation failed
+</ResponseField>
+
+<ResponseField name="mensaje" type="string" required>
+  A human-readable message describing the result of the operation.
+  Provides context about success or the reason for failure.
+</ResponseField>
+
+<ResponseField name="data" type="object | null">
+  The response payload containing the requested data or additional error details.
+  May be `null` for operations that don't return data or for certain errors.
+</ResponseField>
+
+## Success Response Example
+
+When an operation succeeds, you'll receive a response like this:
+
+```json
+{
+  "valor": true,
+  "mensaje": "Usuario registrado exitosamente",
+  "data": {
+    "id": 123,
+    "nombre": "Juan Pérez",
+    "correo": "juan@example.com",
+    "rol": "CLIENTE"
+  }
+}
+```
+
+## Error Response Examples
+
+When an operation fails, the response will have `valor: false`:
+
+### Validation Error
+```json
+{
+  "valor": false,
+  "mensaje": "El correo electrónico ya está registrado",
+  "data": null
+}
+```
+
+### Not Found Error
+```json
+{
+  "valor": false,
+  "mensaje": "Usuario no encontrado",
+  "data": null
+}
+```
+
+### Business Logic Error
+```json
+{
+  "valor": false,
+  "mensaje": "La mesa ya está ocupada en ese horario",
+  "data": null
+}
+```
+
+## HTTP Status Codes
+
+The API uses standard HTTP status codes in combination with the `ResultadoResponse` pattern:
+
+### Success Codes (2xx)
+
+<ResponseField name="200 OK" type="status">
+  Request succeeded. Used for successful GET, PUT, and PATCH operations.
+  
+  ```json
+  {
+    "valor": true,
+    "mensaje": "Pedido obtenido exitosamente",
+    "data": { /* order data */ }
+  }
+  ```
+</ResponseField>
+
+<ResponseField name="201 Created" type="status">
+  Resource successfully created. Used for successful POST operations.
+  
+  ```json
+  {
+    "valor": true,
+    "mensaje": "Reserva creada exitosamente",
+    "data": { "idReserva": 456 }
+  }
+  ```
+</ResponseField>
+
+<ResponseField name="204 No Content" type="status">
+  Request succeeded but no content to return. Used for successful DELETE operations.
+</ResponseField>
+
+### Client Error Codes (4xx)
+
+<ResponseField name="400 Bad Request" type="status">
+  The request is invalid or contains invalid parameters.
+  
+  ```json
+  {
+    "valor": false,
+    "mensaje": "Datos de entrada inválidos",
+    "data": null
+  }
+  ```
+</ResponseField>
+
+<ResponseField name="401 Unauthorized" type="status">
+  Authentication failed or token is invalid/expired.
+  
+  ```json
+  {
+    "error": "Credenciales inválidas"
+  }
+  ```
+  
+  <Note>
+    Some authentication endpoints return a different error format for security reasons.
+  </Note>
+</ResponseField>
+
+<ResponseField name="404 Not Found" type="status">
+  The requested resource does not exist.
+  
+  ```json
+  {
+    "valor": false,
+    "mensaje": "Evento no encontrado",
+    "data": null
+  }
+  ```
+</ResponseField>
+
+### Server Error Codes (5xx)
+
+<ResponseField name="500 Internal Server Error" type="status">
+  An unexpected error occurred on the server.
+  
+  ```json
+  {
+    "valor": false,
+    "mensaje": "Error interno del servidor: Database connection failed",
+    "data": null
+  }
+  ```
+</ResponseField>
+
+## Common Error Scenarios
+
+### Authentication Errors
+
+**Missing or Invalid Token**
+```bash
+HTTP/1.1 401 Unauthorized
+```
+```json
+{
+  "error": "Credenciales inválidas"
+}
+```
+
+**Solution**: Obtain a new JWT token by logging in through `/auth/login`
+
+### Validation Errors
+
+**Invalid Input Data**
+```bash
+HTTP/1.1 400 Bad Request
+```
+```json
+{
+  "valor": false,
+  "mensaje": "El número de personas debe ser mayor a 0",
+  "data": null
+}
+```
+
+**Solution**: Check the `mensaje` field for details about what needs to be corrected
+
+### Resource Conflicts
+
+**Duplicate Resource**
+```bash
+HTTP/1.1 400 Bad Request
+```
+```json
+{
+  "valor": false,
+  "mensaje": "El correo electrónico ya está registrado",
+  "data": null
+}
+```
+
+**Solution**: Use a different unique identifier (e.g., a different email address)
+
+### Business Logic Violations
+
+**Invalid State Transition**
+```bash
+HTTP/1.1 400 Bad Request
+```
+```json
+{
+  "valor": false,
+  "mensaje": "No se puede cancelar una reserva que ya fue atendida",
+  "data": null
+}
+```
+
+**Solution**: Review business rules and ensure operations are performed in valid sequence
+
+## Error Handling Best Practices
+
+### 1. Always Check the `valor` Field
+
+<CodeGroup>
+```javascript JavaScript/TypeScript
+const response = await fetch('http://localhost:8098/userService/auth/register', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(userData)
+});
+
+const result = await response.json();
+
+if (result.valor) {
+  console.log('Success:', result.mensaje);
+  // Handle success with result.data
+} else {
+  console.error('Error:', result.mensaje);
+  // Handle error
+}
+```
+
+```java Java
+ResultadoResponse<Usuario> resultado = usuarioService.registrarUsuario(usuario);
+
+if (resultado.isValor()) {
+    return ResponseEntity.status(HttpStatus.CREATED).body(resultado);
+} else {
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(resultado);
+}
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'http://localhost:8098/userService/auth/register',
+    json=user_data
+)
+
+result = response.json()
+
+if result.get('valor'):
+    print(f"Success: {result['mensaje']}")
+    # Handle success
+else:
+    print(f"Error: {result['mensaje']}")
+    # Handle error
+```
+</CodeGroup>
+
+### 2. Handle HTTP Status Codes
+
+<Warning>
+  Don't rely solely on HTTP status codes. Always check the `valor` field in the response body, as some endpoints return 200 OK with `valor: false` for business logic errors.
+</Warning>
+
+```javascript
+if (response.ok) {
+  const result = await response.json();
+  if (result.valor) {
+    // True success
+  } else {
+    // Business logic error (200 OK but valor: false)
+  }
+} else {
+  // HTTP error (4xx, 5xx)
+}
+```
+
+### 3. Display User-Friendly Messages
+
+The `mensaje` field contains user-friendly error descriptions in Spanish (the system's default language):
+
+```javascript
+if (!result.valor) {
+  alert(result.mensaje); // Already user-friendly
+}
+```
+
+### 4. Implement Retry Logic
+
+For 500-level errors, implement exponential backoff retry logic:
+
+```javascript
+async function apiCallWithRetry(url, options, maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const response = await fetch(url, options);
+      if (response.status < 500) {
+        return response; // Don't retry client errors
+      }
+    } catch (error) {
+      if (i === maxRetries - 1) throw error;
+      await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i)));
+    }
+  }
+}
+```
+
+## Service-Specific Error Patterns
+
+### User Service Errors
+- `"El correo electrónico ya está registrado"` - Email already exists
+- `"Credenciales inválidas"` - Invalid login credentials
+- `"Usuario no encontrado"` - User not found
+
+### Reservation Service Errors
+- `"La mesa ya está ocupada en ese horario"` - Table already reserved
+- `"No hay slots disponibles"` - No available time slots
+- `"No se puede cancelar una reserva que ya fue atendida"` - Cannot cancel completed reservation
+
+### Payment Service Errors
+- `"Pago no encontrado"` - Payment not found
+- `"El pago ya fue confirmado"` - Payment already confirmed
+- `"Código de operación inválido"` - Invalid operation code
+
+### Order Service Errors
+- `"Pedido no encontrado"` - Order not found
+- `"No se puede modificar un pedido pagado"` - Cannot modify paid order
+- `"Estado de pedido inválido"` - Invalid order status
+
+## Circuit Breaker Errors
+
+Some services (like Qualification Service) implement circuit breaker patterns for resilience:
+
+```json
+{
+  "valor": false,
+  "mensaje": "Servicio temporalmente no disponible. Por favor intente nuevamente.",
+  "data": null
+}
+```
+
+<Note>
+  When a circuit breaker opens, the service will fail fast to prevent cascading failures. Wait for the circuit to close before retrying.
+</Note>
+
+## Debugging Tips
+
+1. **Check Service Health**: Verify the service is running via health endpoints
+2. **Review Logs**: Service logs show detailed error traces (enable with `logging.level`)
+3. **Validate JWT Token**: Ensure tokens haven't expired and are properly formatted
+4. **Check Request Format**: Verify Content-Type headers and request body structure
+5. **Test Directly**: Try calling the service directly (bypassing the gateway) to isolate routing issues
+
+## Next Steps
+
+- Review [API Introduction](/api-reference/introduction) for authentication details
+- Explore [Base URLs](/api-reference/base-url) for environment configuration
+- Check individual endpoint documentation for specific error scenarios

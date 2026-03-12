@@ -1,0 +1,297 @@
+---
+title: 'Tags'
+description: 'Manage dish tags and labels'
+---
+
+## Create Tag
+
+<api-endpoint method="POST" endpoint="/etiquetas" />
+
+Create a new tag for categorizing dishes.
+
+### Request Body
+
+<ParamField body="nombre" type="string" required>
+  Tag name (max 100 characters)
+</ParamField>
+
+<ParamField body="descripcion" type="string">
+  Tag description (max 500 characters)
+</ParamField>
+
+### Response
+
+<ResponseField name="idEtiqueta" type="integer">
+  Tag ID
+</ResponseField>
+
+<ResponseField name="nombre" type="string">
+  Tag name
+</ResponseField>
+
+<ResponseField name="descripcion" type="string">
+  Tag description
+</ResponseField>
+
+<ResponseField name="activo" type="boolean">
+  Whether the tag is active
+</ResponseField>
+
+<ResponseField name="fechaRegistro" type="string">
+  Registration date and time
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X POST https://api.korofood.com/etiquetas \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nombre": "Vegetariano",
+    "descripcion": "Platos sin carne"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "idEtiqueta": 5,
+  "nombre": "Vegetariano",
+  "descripcion": "Platos sin carne",
+  "activo": true,
+  "fechaRegistro": "2026-03-12T10:30:00"
+}
+```
+</ResponseExample>
+
+## List All Tags
+
+<api-endpoint method="GET" endpoint="/etiquetas" />
+
+Retrieve all tags in the system.
+
+### Response
+
+<ResponseField name="data" type="array">
+  Array of tag objects
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl https://api.korofood.com/etiquetas
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+[
+  {
+    "idEtiqueta": 1,
+    "nombre": "Picante",
+    "descripcion": "Contiene ají",
+    "activo": true,
+    "fechaRegistro": "2026-01-15T08:00:00"
+  },
+  {
+    "idEtiqueta": 2,
+    "nombre": "Vegano",
+    "descripcion": "Sin productos de origen animal",
+    "activo": true,
+    "fechaRegistro": "2026-01-15T08:05:00"
+  },
+  {
+    "idEtiqueta": 5,
+    "nombre": "Vegetariano",
+    "descripcion": "Platos sin carne",
+    "activo": true,
+    "fechaRegistro": "2026-03-12T10:30:00"
+  }
+]
+```
+</ResponseExample>
+
+## List Active Tags
+
+<api-endpoint method="GET" endpoint="/etiquetas/activas" />
+
+Retrieve all active tags.
+
+### Response
+
+<ResponseField name="data" type="array">
+  Array of active tag objects
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl https://api.korofood.com/etiquetas/activas
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+[
+  {
+    "idEtiqueta": 1,
+    "nombre": "Picante",
+    "descripcion": "Contiene ají",
+    "activo": true,
+    "fechaRegistro": "2026-01-15T08:00:00"
+  },
+  {
+    "idEtiqueta": 2,
+    "nombre": "Vegano",
+    "descripcion": "Sin productos de origen animal",
+    "activo": true,
+    "fechaRegistro": "2026-01-15T08:05:00"
+  }
+]
+```
+</ResponseExample>
+
+## Get Tag by ID
+
+<api-endpoint method="GET" endpoint="/etiquetas/{id}" />
+
+Retrieve a specific tag by ID.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  Tag ID
+</ParamField>
+
+### Response
+
+<ResponseField name="idEtiqueta" type="integer">
+  Tag ID
+</ResponseField>
+
+<ResponseField name="nombre" type="string">
+  Tag name
+</ResponseField>
+
+<ResponseField name="descripcion" type="string">
+  Tag description
+</ResponseField>
+
+<ResponseField name="activo" type="boolean">
+  Active status
+</ResponseField>
+
+<ResponseField name="fechaRegistro" type="string">
+  Registration timestamp
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl https://api.korofood.com/etiquetas/1
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "idEtiqueta": 1,
+  "nombre": "Picante",
+  "descripcion": "Contiene ají",
+  "activo": true,
+  "fechaRegistro": "2026-01-15T08:00:00"
+}
+```
+</ResponseExample>
+
+## Update Tag
+
+<api-endpoint method="PUT" endpoint="/etiquetas/{id}" />
+
+Update an existing tag.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  Tag ID to update
+</ParamField>
+
+### Request Body
+
+<ParamField body="nombre" type="string" required>
+  Updated tag name
+</ParamField>
+
+<ParamField body="descripcion" type="string">
+  Updated tag description
+</ParamField>
+
+### Response
+
+<ResponseField name="idEtiqueta" type="integer">
+  Tag ID
+</ResponseField>
+
+<ResponseField name="nombre" type="string">
+  Updated tag name
+</ResponseField>
+
+<ResponseField name="descripcion" type="string">
+  Updated tag description
+</ResponseField>
+
+<ResponseField name="activo" type="boolean">
+  Active status
+</ResponseField>
+
+<ResponseField name="fechaRegistro" type="string">
+  Registration timestamp
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X PUT https://api.korofood.com/etiquetas/1 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nombre": "Muy Picante",
+    "descripcion": "Contiene ají rocoto"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "idEtiqueta": 1,
+  "nombre": "Muy Picante",
+  "descripcion": "Contiene ají rocoto",
+  "activo": true,
+  "fechaRegistro": "2026-01-15T08:00:00"
+}
+```
+</ResponseExample>
+
+## Delete Tag
+
+<api-endpoint method="DELETE" endpoint="/etiquetas/{id}" />
+
+Delete a tag (soft delete - marks as inactive).
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  Tag ID to delete
+</ParamField>
+
+### Response
+
+Returns HTTP 204 No Content on success.
+
+<RequestExample>
+```bash cURL
+curl -X DELETE https://api.korofood.com/etiquetas/1
+```
+</RequestExample>
+
+<ResponseExample>
+```text
+HTTP/1.1 204 No Content
+```
+</ResponseExample>

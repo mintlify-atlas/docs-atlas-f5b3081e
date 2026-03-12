@@ -1,0 +1,548 @@
+---
+title: 'Docker Deployment'
+description: 'Deploy KoroFood Restaurant Management System using Docker Compose'
+icon: 'docker'
+---
+
+## Overview
+
+KoroFood's Restaurant Management System is containerized using Docker and orchestrated with Docker Compose. This guide covers the complete Docker setup, including all microservices, databases, and infrastructure components.
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- Docker Engine 20.10 or higher
+- Docker Compose 3.8 or higher
+- At least 8GB of RAM available for containers
+- 20GB of free disk space
+
+## Docker Compose Architecture
+
+The system consists of the following containerized services:
+
+### Infrastructure Services
+
+<Accordion title="Eureka Server - Service Discovery">
+  **Port:** 8761:8761
+  
+  Netflix Eureka server for service registration and discovery. All microservices register with this server to enable dynamic service-to-service communication.
+  
+  **Health Check:**
+  - Endpoint: `http://localhost:8761/actuator/health`
+  - Interval: 15s
+  - Timeout: 10s
+  - Retries: 10
+  - Start Period: 60s
+</Accordion>
+
+<Accordion title="PostgreSQL - Main Database">
+  **Port:** 5433:5432
+  
+  PostgreSQL 16 Alpine serves as the primary relational database for all microservices. Each service has its own isolated database.
+  
+  **Databases:**
+  - DB_USER_SERVICE
+  - DB_TABLE_SERVICE
+  - DB_RESERVATION_SERVICE
+  - DB_PAYMENT_SERVICE
+  - DB_ORDER_SERVICE
+  - DB_MENU_SERVICE
+  - DB_EVENT_SERVICE
+  - DB_QUALIFICATION_SERVICE
+  
+  **Volume:** `postgres_data:/var/lib/postgresql/data`
+  
+  **Health Check:**
+  - Command: `pg_isready -U postgres`
+  - Interval: 10s
+  - Timeout: 5s
+  - Retries: 5
+</Accordion>
+
+<Accordion title="MongoDB - Message Storage">
+  **Port:** 27017:27017
+  
+  MongoDB 7 stores chat messages and logs from the AI chatbot service.
+  
+  **Volume:** `mongo_data:/data/db`
+  
+  **Health Check:**
+  - Command: `mongosh --eval "db.adminCommand('ping')"`
+  - Interval: 10s
+  - Timeout: 5s
+  - Retries: 5
+</Accordion>
+
+<Accordion title="Redis - Cache Layer">
+  **Port:** 6379:6379
+  
+  Redis Alpine provides high-performance caching for sessions, tokens, and frequently queried data.
+  
+  **Health Check:**
+  - Command: `redis-cli ping`
+  - Interval: 10s
+  - Timeout: 3s
+  - Retries: 5
+</Accordion>
+
+<Accordion title="RabbitMQ - Message Broker">
+  **Port:** 5672:5672
+  
+  RabbitMQ handles asynchronous messaging between microservices, particularly for payment processing events.
+  
+  **Credentials:**
+  - Username: guest
+  - Password: guest
+  
+  **Health Check:**
+  - Command: `rabbitmq-diagnostics ping`
+  - Interval: 10s
+  - Timeout: 5s
+  - Retries: 5
+</Accordion>
+
+### Microservices
+
+<CardGroup cols={2}>
+  <Card title="User Service" icon="user" iconType="solid">
+    **Port:** 8081
+    
+    Main service handling user authentication, profiles, and AI chatbot integration.
+    
+    **Dependencies:** PostgreSQL, MongoDB, Redis, Eureka
+  </Card>
+  
+  <Card title="Table Service" icon="table" iconType="solid">
+    **Port:** 8082
+    
+    Manages restaurant table availability and assignments.
+    
+    **Dependencies:** PostgreSQL, Eureka
+  </Card>
+  
+  <Card title="Reservation Service" icon="calendar" iconType="solid">
+    **Port:** 8083
+    
+    Handles reservation bookings, confirmations, and notifications.
+    
+    **Dependencies:** PostgreSQL, Eureka
+  </Card>
+  
+  <Card title="Qualification Service" icon="star" iconType="solid">
+    **Port:** 8084
+    
+    Manages dish and event ratings and reviews.
+    
+    **Dependencies:** PostgreSQL, Redis, Eureka
+  </Card>
+  
+  <Card title="Payment Service" icon="credit-card" iconType="solid">
+    **Port:** 8085
+    
+    Processes payments with receipt OCR verification.
+    
+    **Dependencies:** PostgreSQL, RabbitMQ, Eureka
+  </Card>
+  
+  <Card title="Order Service" icon="clipboard" iconType="solid">
+    **Port:** 8086
+    
+    Manages customer orders and real-time order tracking.
+    
+    **Dependencies:** PostgreSQL, Eureka
+  </Card>
+  
+  <Card title="Menu Service" icon="utensils" iconType="solid">
+    **Port:** 8087
+    
+    Provides restaurant menu with images and descriptions.
+    
+    **Dependencies:** PostgreSQL, Eureka
+  </Card>
+  
+  <Card title="Event Service" icon="calendar-star" iconType="solid">
+    **Port:** 8088
+    
+    Manages special events and anime-themed gatherings.
+    
+    **Dependencies:** PostgreSQL, Eureka
+  </Card>
+</CardGroup>
+
+### Gateway Services
+
+<Card title="API Gateway" icon="network-wired" iconType="solid">
+  **Port:** 8098
+  
+  Single entry point for all client requests. Handles routing, JWT authentication, and load balancing.
+  
+  **Dependencies:** Eureka
+</Card>
+
+<Card title="User Service SOAP" icon="code" iconType="solid">
+  **Port:** 8093
+  
+  SOAP-based user service for legacy system integration.
+  
+  **Dependencies:** PostgreSQL, Eureka
+</Card>
+
+## Deployment Steps
+
+<Steps>
+  <Step title="Clone the Repository">
+    Download the KoroFood's Restaurant Management System source code:
+    
+    ```bash
+    git clone https://github.com/CoDeVeck/KoroFood-s.git
+    cd KoroFood-s
+    ```
+  </Step>
+  
+  <Step title="Configure Environment Variables">
+    Create a `.env` file in the project root directory with your configuration:
+    
+    ```bash
+    cp .env.example .env
+    ```
+    
+    See the [Environment Variables](/deployment/environment-variables) page for detailed configuration.
+  </Step>
+  
+  <Step title="Build and Start All Services">
+    Use Docker Compose to build and launch all services:
+    
+    ```bash
+    docker-compose up -d
+    ```
+    
+    This command will:
+    - Build Docker images for all microservices
+    - Create and start all containers
+    - Set up networking between services
+    - Initialize databases with seed data
+    - Start health checks for all services
+  </Step>
+  
+  <Step title="Verify Service Health">
+    Check that all services are running and healthy:
+    
+    ```bash
+    docker-compose ps
+    ```
+    
+    All services should show status as "Up" or "healthy".
+  </Step>
+  
+  <Step title="Access the Services">
+    Once all services are healthy, you can access:
+    
+    - **Eureka Dashboard:** http://localhost:8761
+    - **API Gateway:** http://localhost:8098
+    - **Individual Services:** Ports 8081-8088, 8093
+  </Step>
+</Steps>
+
+## Service Configuration
+
+Each microservice is configured with the following environment variables:
+
+### Common Configuration
+
+All services share these common settings:
+
+```yaml
+EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+SPRING_DATASOURCE_USERNAME: postgres
+SPRING_DATASOURCE_PASSWORD: sql
+```
+
+### Service-Specific Configuration
+
+<CodeGroup>
+
+```yaml User Service
+environment:
+  SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/DB_USER_SERVICE
+  SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/DB_MENSAJES
+  SPRING_DATA_REDIS_HOST: redis
+  SPRING_DATA_REDIS_PORT: 6379
+  CLOUDINARY_NAME: ${CLOUDINARY_NAME}
+  CLOUDINARY_KEY_KOROFOODS: ${CLOUDINARY_KEY_KOROFOODS}
+  CLOUDINARY_SECRET_KOROFOODS: ${CLOUDINARY_SECRET_KOROFOODS}
+  GEMINI_API_KEY: ${GEMINI_API_KEY}
+```
+
+```yaml Payment Service
+environment:
+  SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/DB_PAYMENT_SERVICE
+  SPRING_RABBITMQ_HOST: rabbitmq
+  SPRING_RABBITMQ_PORT: 5672
+  SPRING_RABBITMQ_USERNAME: guest
+  SPRING_RABBITMQ_PASSWORD: guest
+  CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+  CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+  CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+  GOOGLE_VISION_API_KEY: ${GOOGLE_VISION_API_KEY}
+```
+
+```yaml Reservation Service
+environment:
+  SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/DB_RESERVATION_SERVICE
+  EMAIL_USERNAME: ${EMAIL_USERNAME}
+  EMAIL_PASSWORD: ${EMAIL_PASSWORD}
+  TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+  TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+  TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER}
+```
+
+```yaml API Gateway
+environment:
+  JWT_SECRET: ${JWT_SECRET}
+```
+
+</CodeGroup>
+
+## Volume Management
+
+The system uses named volumes for persistent data storage:
+
+### Postgres Volume
+
+```yaml
+volumes:
+  postgres_data:
+```
+
+Stores all PostgreSQL database data across the 8 service databases.
+
+### MongoDB Volume
+
+```yaml
+volumes:
+  mongo_data:
+```
+
+Persists chat messages and conversation logs.
+
+## Health Checks
+
+<Warning>
+  All services have health checks configured. Dependent services will not start until their dependencies are healthy. This ensures proper startup order and system stability.
+</Warning>
+
+Health check configuration follows this pattern:
+
+```yaml
+healthcheck:
+  test: ["CMD-SHELL", "health-check-command"]
+  interval: 10-15s
+  timeout: 5-10s
+  retries: 5-10
+  start_period: 0-60s
+```
+
+## Database Initialization
+
+PostgreSQL automatically initializes all databases on first startup:
+
+<Steps>
+  <Step title="Create Databases">
+    The `init-db.sh` script creates 8 separate databases for each microservice.
+  </Step>
+  
+  <Step title="Apply Schema">
+    Table creation scripts (`TABLAS_*_INSERT.sql`) are executed for each database.
+  </Step>
+  
+  <Step title="Seed Data">
+    Initial data scripts (`DATA_*_INSERT.sql`) populate tables with default values.
+  </Step>
+</Steps>
+
+See [Database Setup](/deployment/database-setup) for detailed information.
+
+## Docker Commands
+
+### Start Services
+
+```bash
+# Start all services
+docker-compose up -d
+
+# Start specific service
+docker-compose up -d user-service
+
+# Start with build
+docker-compose up -d --build
+```
+
+### Stop Services
+
+```bash
+# Stop all services
+docker-compose down
+
+# Stop and remove volumes
+docker-compose down -v
+
+# Stop specific service
+docker-compose stop user-service
+```
+
+### View Logs
+
+```bash
+# All services
+docker-compose logs -f
+
+# Specific service
+docker-compose logs -f user-service
+
+# Last 100 lines
+docker-compose logs --tail=100 user-service
+```
+
+### Check Service Status
+
+```bash
+# View all services
+docker-compose ps
+
+# Check specific service health
+docker inspect --format='{{.State.Health.Status}}' korofood-s-user-service-1
+```
+
+### Rebuild Services
+
+```bash
+# Rebuild all services
+docker-compose build
+
+# Rebuild specific service
+docker-compose build user-service
+
+# Rebuild without cache
+docker-compose build --no-cache
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Service fails to start">
+    Check if dependent services are healthy:
+    
+    ```bash
+    docker-compose ps
+    docker-compose logs [service-name]
+    ```
+    
+    Ensure all environment variables are properly set in your `.env` file.
+  </Accordion>
+  
+  <Accordion title="Database connection errors">
+    Verify PostgreSQL is running and healthy:
+    
+    ```bash
+    docker-compose logs postgres
+    docker exec -it korofood-s-postgres-1 pg_isready -U postgres
+    ```
+    
+    Check that the database was properly initialized:
+    
+    ```bash
+    docker exec -it korofood-s-postgres-1 psql -U postgres -l
+    ```
+  </Accordion>
+  
+  <Accordion title="Services can't communicate">
+    Ensure all services are on the same Docker network:
+    
+    ```bash
+    docker network ls
+    docker network inspect korofood-s_default
+    ```
+    
+    Verify Eureka server is running and services are registered:
+    
+    Visit http://localhost:8761 to check service registration.
+  </Accordion>
+  
+  <Accordion title="Out of memory errors">
+    Increase Docker memory allocation:
+    
+    - Docker Desktop: Preferences → Resources → Memory
+    - Recommended: At least 8GB for all services
+    
+    Check current memory usage:
+    
+    ```bash
+    docker stats
+    ```
+  </Accordion>
+  
+  <Accordion title="Port already in use">
+    Check if ports are already occupied:
+    
+    ```bash
+    # Linux/Mac
+    lsof -i :8761
+    
+    # Windows
+    netstat -ano | findstr :8761
+    ```
+    
+    Modify port mappings in `docker-compose.yml` if needed.
+  </Accordion>
+</AccordionGroup>
+
+## Performance Optimization
+
+<Note>
+  For production deployments, consider these optimizations:
+  
+  - Set appropriate JVM heap sizes for Spring Boot services
+  - Configure connection pooling for databases
+  - Enable Redis persistence for cache recovery
+  - Use Docker resource limits to prevent resource exhaustion
+  - Implement container monitoring with Prometheus
+</Note>
+
+### Resource Limits Example
+
+```yaml
+user-service:
+  build: ./userService/userService
+  ports:
+    - "8081:8081"
+  deploy:
+    resources:
+      limits:
+        cpus: '1.0'
+        memory: 1024M
+      reservations:
+        cpus: '0.5'
+        memory: 512M
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Environment Variables" icon="gear" href="/deployment/environment-variables">
+    Configure all required environment variables
+  </Card>
+  
+  <Card title="Database Setup" icon="database" href="/deployment/database-setup">
+    Learn about database initialization and migrations
+  </Card>
+  
+  <Card title="API Gateway" icon="network-wired" href="/infrastructure/api-gateway">
+    Understand API routing and authentication
+  </Card>
+  
+  <Card title="Environment Variables" icon="gear" href="/deployment/environment-variables">
+    Configure environment variables
+  </Card>
+</CardGroup>

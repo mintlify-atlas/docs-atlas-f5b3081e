@@ -1,0 +1,186 @@
+---
+title: 'Payment Methods'
+description: 'Handle payment verification and receipts'
+---
+
+## Upload Payment Screenshot
+
+<api-endpoint method="POST" endpoint="/pago/subir-captura" />
+
+Upload a payment screenshot for verification using Google Vision AI.
+
+### Request Body
+
+<ParamField body="idPago" type="integer" required>
+  Payment ID
+</ParamField>
+
+<ParamField body="imagenBase64" type="string" required>
+  Base64 encoded payment screenshot
+</ParamField>
+
+### Response
+
+<ResponseField name="idPago" type="integer">
+  Payment ID
+</ResponseField>
+
+<ResponseField name="estado" type="string">
+  Payment status (VERIFICADO if successful, RECHAZADO if validation fails)
+</ResponseField>
+
+<ResponseField name="estadoDescripcion" type="string">
+  Status description
+</ResponseField>
+
+<ResponseField name="urlCaptura" type="string">
+  URL of the uploaded screenshot
+</ResponseField>
+
+<ResponseField name="hashImagen" type="string">
+  SHA-256 hash of the image for verification
+</ResponseField>
+
+<ResponseField name="montoDetectado" type="number">
+  Amount detected from the screenshot
+</ResponseField>
+
+<ResponseField name="fechaDetectada" type="string">
+  Date and time detected from the screenshot
+</ResponseField>
+
+<ResponseField name="motivoRechazo" type="string">
+  Rejection reason if validation fails
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X POST https://api.korofood.com/pago/subir-captura \
+  -H "Content-Type: application/json" \
+  -d '{
+    "idPago": 789,
+    "imagenBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json Success
+{
+  "idPago": 789,
+  "estado": "VERIFICADO",
+  "estadoDescripcion": "Verificado",
+  "urlCaptura": "https://res.cloudinary.com/korofood/image/upload/v1234567890/pagos/789.jpg",
+  "hashImagen": "a3b2c1d4e5f6g7h8i9j0k1l2m3n4o5p6",
+  "montoDetectado": 50.00,
+  "fechaDetectada": "2026-03-12T15:30:00",
+  "motivoRechazo": null
+}
+```
+</ResponseExample>
+
+<ResponseExample>
+```json Rejected
+{
+  "idPago": 789,
+  "estado": "RECHAZADO",
+  "estadoDescripcion": "Rechazado",
+  "urlCaptura": "https://res.cloudinary.com/korofood/image/upload/v1234567890/pagos/789.jpg",
+  "hashImagen": "a3b2c1d4e5f6g7h8i9j0k1l2m3n4o5p6",
+  "montoDetectado": 40.00,
+  "fechaDetectada": "2026-03-12T15:30:00",
+  "motivoRechazo": "El monto detectado (S/ 40.00) no coincide con el monto esperado (S/ 50.00)"
+}
+```
+</ResponseExample>
+
+## List Payments by User
+
+<api-endpoint method="GET" endpoint="/pago/usuario/{idUsuario}" />
+
+Retrieve all payments made by a specific user.
+
+### Path Parameters
+
+<ParamField path="idUsuario" type="integer" required>
+  User ID
+</ParamField>
+
+### Response
+
+<ResponseField name="data" type="array">
+  Array of payment objects for the user
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl https://api.korofood.com/pago/usuario/123
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+[
+  {
+    "idPago": 789,
+    "idReserva": 456,
+    "idUsuario": 123,
+    "tipoPago": "DR",
+    "tipoPagoDescripcion": "Derecho de Reserva",
+    "monto": 50.00,
+    "metodoPago": "YAPE",
+    "metodoPagoDescripcion": "Yape",
+    "estado": "CONFIRMADO",
+    "estadoDescripcion": "Confirmado",
+    "fechaPago": "2026-03-12T15:30:00",
+    "referenciaPago": "PAY-20260312-789"
+  },
+  {
+    "idPago": 790,
+    "idPedido": 234,
+    "idUsuario": 123,
+    "tipoPago": "PP",
+    "tipoPagoDescripcion": "Pago de Pedido",
+    "monto": 125.50,
+    "metodoPago": "PLIN",
+    "metodoPagoDescripcion": "Plin",
+    "estado": "VERIFICADO",
+    "estadoDescripcion": "Verificado",
+    "fechaPago": "2026-03-13T19:45:00",
+    "referenciaPago": "PAY-20260313-790"
+  }
+]
+```
+</ResponseExample>
+
+## Generate Income Report
+
+<api-endpoint method="GET" endpoint="/pago/reporte/ingresos" />
+
+Generate a PDF report of payment income.
+
+### Response
+
+Returns a PDF file with the income report.
+
+<ResponseField name="Content-Type" type="string">
+  application/pdf
+</ResponseField>
+
+<ResponseField name="Content-Disposition" type="string">
+  attachment; filename="reporte-ingresos.pdf"
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl https://api.korofood.com/pago/reporte/ingresos \
+  -o reporte-ingresos.pdf
+```
+</RequestExample>
+
+<ResponseExample>
+```text
+PDF file downloaded successfully.
+Filename: reporte-ingresos.pdf
+```
+</ResponseExample>

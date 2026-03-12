@@ -1,80 +1,267 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: 'Quick Start'
+description: 'Get KoroFood running in minutes with Docker Compose'
+icon: 'rocket'
 ---
 
-## Get started in three steps
+## Prerequisites
 
-Get your documentation site running locally and make your first customization.
+Before you begin, ensure you have the following installed:
+- **Docker** (20.10 or later)
+- **Docker Compose** (2.0 or later)
+- **Git**
 
-### Step 1: Set up your local environment
+## Installation
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+<Steps>
+  <Step title="Clone the Repository">
+    Clone the KoroFood repository from GitHub:
 
-### Step 2: Deploy your changes
+    ```bash
+    git clone https://github.com/CoDeVeck/KoroFood-s.git
+    cd KoroFood-s
+    ```
+  </Step>
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+  <Step title="Configure Environment Variables">
+    Create a `.env` file in the project root with your API keys and secrets:
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    ```env
+    # JWT Authentication
+    JWT_SECRET=your_jwt_secret_here
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+    # Cloudinary (Image Storage)
+    CLOUDINARY_NAME=your_cloudinary_name
+    CLOUDINARY_KEY_KOROFOODS=your_cloudinary_key
+    CLOUDINARY_SECRET_KOROFOODS=your_cloudinary_secret
 
-### Step 3: Go live
+    # AI Services
+    GEMINI_API_KEY=your_gemini_api_key
+    GOOGLE_VISION_API_KEY=your_google_vision_api_key
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+    # Email Configuration
+    EMAIL_USERNAME=your_email@example.com
+    EMAIL_PASSWORD=your_email_app_password
 
-## Next steps
+    # Twilio (SMS Notifications)
+    TWILIO_ACCOUNT_SID=your_twilio_account_sid
+    TWILIO_AUTH_TOKEN=your_twilio_auth_token
+    TWILIO_PHONE_NUMBER=your_twilio_phone_number
+    ```
 
-Now that you have your docs running, explore these key features:
+    <Note>
+      For development, you can use placeholder values for optional services like Gemini and Google Vision.
+    </Note>
+  </Step>
+
+  <Step title="Start the Services">
+    Launch all microservices and infrastructure with Docker Compose:
+
+    ```bash
+    docker-compose up -d
+    ```
+
+    This will start:
+    - 9 microservices (User, Order, Payment, Event, Menu, Table, Reservation, Qualification, User SOAP)
+    - API Gateway (port 8098)
+    - Eureka Server (port 8761)
+    - PostgreSQL (port 5433)
+    - MongoDB (port 27017)
+    - Redis (port 6379)
+    - RabbitMQ (port 5672)
+  </Step>
+
+  <Step title="Verify the Services">
+    Check that all services are running:
+
+    ```bash
+    docker-compose ps
+    ```
+
+    Wait for all services to be healthy. You can monitor the logs:
+
+    ```bash
+    docker-compose logs -f
+    ```
+  </Step>
+
+  <Step title="Access the Eureka Dashboard">
+    Open your browser and navigate to:
+
+    ```
+    http://localhost:8761
+    ```
+
+    You should see all microservices registered and available.
+  </Step>
+</Steps>
+
+## Your First API Call
+
+Once the services are running, you can make your first API call through the API Gateway:
+
+<CodeGroup>
+
+```bash cURL
+# Register a new user
+curl -X POST http://localhost:8098/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nombre": "John",
+    "apellido": "Doe",
+    "correo": "john.doe@example.com",
+    "clave": "securePassword123",
+    "telefono": "1234567890",
+    "direccion": "123 Main St"
+  }'
+```
+
+```javascript JavaScript
+// Login and get JWT token
+const response = await fetch('http://localhost:8098/auth/login', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    correo: 'john.doe@example.com',
+    clave: 'securePassword123'
+  })
+});
+
+const { token } = await response.json();
+console.log('JWT Token:', token);
+```
+
+```python Python
+import requests
+
+# Get list of events
+response = requests.get('http://localhost:8098/eventos')
+events = response.json()
+print(f"Found {len(events)} events")
+```
+
+</CodeGroup>
+
+## Common Operations
+
+### View Available Events
+
+```bash
+curl http://localhost:8098/eventos
+```
+
+### Create a Reservation
+
+```bash
+curl -X POST http://localhost:8098/reservacion/register \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "idUsuario": 1,
+    "idMesa": 1,
+    "fecha": "2024-12-25",
+    "hora": "19:00:00",
+    "cantidadPersonas": 4
+  }'
+```
+
+### Get Menu
+
+```bash
+curl http://localhost:8098/menu/download -o menu.pdf
+```
+
+## Service URLs
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="API Gateway" icon="network-wired">
+    `http://localhost:8098`
+  </Card>
+  <Card title="User Service" icon="user">
+    `http://localhost:8081`
+  </Card>
+  <Card title="Order Service" icon="receipt">
+    `http://localhost:8086`
+  </Card>
+  <Card title="Event Service" icon="calendar">
+    `http://localhost:8088`
+  </Card>
 </CardGroup>
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+## Frontend Setup (Optional)
+
+To run the Angular frontend:
+
+<Steps>
+  <Step title="Navigate to Frontend Directory">
+    ```bash
+    cd userService/userService/angular
+    ```
+  </Step>
+
+  <Step title="Install Dependencies">
+    ```bash
+    npm install
+    ```
+  </Step>
+
+  <Step title="Start Development Server">
+    ```bash
+    ng serve --ssl true
+    ```
+  </Step>
+
+  <Step title="Access the Application">
+    Open your browser and navigate to:
+    ```
+    https://localhost:4200
+    ```
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Services not starting">
+    Check Docker logs for errors:
+    ```bash
+    docker-compose logs [service-name]
+    ```
+    
+    Ensure all required environment variables are set in your `.env` file.
+  </Accordion>
+
+  <Accordion title="Database connection errors">
+    Wait for PostgreSQL to fully initialize (about 30-60 seconds on first start). Check health:
+    ```bash
+    docker-compose ps postgres
+    ```
+  </Accordion>
+
+  <Accordion title="Port conflicts">
+    If ports are already in use, stop conflicting services or modify port mappings in `docker-compose.yml`.
+  </Accordion>
+
+  <Accordion title="Authentication errors">
+    Ensure your `JWT_SECRET` is set in the `.env` file and the API Gateway is running.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Architecture" icon="diagram-project" href="/architecture">
+    Learn about the microservices architecture
+  </Card>
+  <Card title="Authentication" icon="key" href="/authentication/overview">
+    Understand JWT and OAuth authentication
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/introduction">
+    Explore all available endpoints
+  </Card>
+  <Card title="Deployment" icon="rocket" href="/deployment/docker">
+    Deploy to production
+  </Card>
+</CardGroup>

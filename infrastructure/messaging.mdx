@@ -1,0 +1,593 @@
+---
+title: Messaging with RabbitMQ
+description: Event-driven architecture using RabbitMQ for asynchronous communication
+---
+
+## Overview
+
+KoroFood uses **RabbitMQ** as its message broker for asynchronous, event-driven communication between microservices. This enables:
+
+- **Decoupled services** that don't need to know about each other
+- **Reliable message delivery** with persistence and acknowledgments
+- **Event-driven workflows** like payment confirmation
+- **Scalable architecture** that can handle message spikes
+
+<Info>
+RabbitMQ runs on port **5672** (AMQP protocol) with the management UI available on port 15672.
+</Info>
+
+## RabbitMQ Configuration
+
+### Docker Setup
+
+From `docker-compose.yml`:
+
+```yaml
+rabbitmq:
+  image: rabbitmq:3-management-alpine
+  ports:
+    - "5672:5672"      # AMQP protocol
+    - "15672:15672"    # Management UI
+  environment:
+    RABBITMQ_DEFAULT_USER: guest
+    RABBITMQ_DEFAULT_PASS: guest
+  healthcheck:
+    test: ["CMD", "rabbitmq-diagnostics", "ping"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+```
+
+<Tip>
+Access the RabbitMQ Management UI at `http://localhost:15672` with credentials `guest/guest`.
+</Tip>
+
+## Payment Service Integration
+
+The Payment Service is the primary publisher of RabbitMQ events:
+
+### Spring Configuration
+
+From `paymentService/paymentService/src/main/java/com/koroFoods/paymentService/config/RabbitMQConfig.java`:
+
+```java
+package com.koroFoods.paymentService.config;
+
+import org.springframework.amqp.core.*;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class RabbitMQConfig {
+
+    // Exchange name
+    public static final String PAGO_EXCHANGE = "pago.exchange";
+
+    // Queue names
+    public static final String PAGO_CONFIRMADO_QUEUE = "pago.confirmado.queue";
+    public static final String PAGO_ANULADO_QUEUE = "pago.anulado.queue";
+
+    // Routing keys
+    public static final String PAGO_CONFIRMADO_ROUTING_KEY = "pago.confirmado";
+    public static final String PAGO_ANULADO_ROUTING_KEY = "pago.anulado";
+
+    // Exchange Bean
+    @Bean
+    public TopicExchange pagoExchange() {
+        return new TopicExchange(PAGO_EXCHANGE);
+    }
+
+    // Queue Beans
+    @Bean
+    public Queue pagoConfirmadoQueue() {
+        return new Queue(PAGO_CONFIRMADO_QUEUE, true); // durable = true
+    }
+
+    @Bean
+    public Queue pagoAnuladoQueue() {
+        return new Queue(PAGO_ANULADO_QUEUE, true);
+    }
+
+    // Bindings
+    @Bean
+    public Binding pagoConfirmadoBinding() {
+        return BindingBuilder
+                .bind(pagoConfirmadoQueue())
+                .to(pagoExchange())
+                .with(PAGO_CONFIRMADO_ROUTING_KEY);
+    }
+
+    @Bean
+    public Binding pagoAnuladoBinding() {
+        return BindingBuilder
+                .bind(pagoAnuladoQueue())
+                .to(pagoExchange())
+                .with(PAGO_ANULADO_ROUTING_KEY);
+    }
+
+    // JSON Message Converter
+    @Bean
+    public MessageConverter jsonMessageConverter() {
+        return new Jackson2JsonMessageConverter();
+    }
+
+    // RabbitTemplate with JSON converter
+    @Bean
+    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
+        RabbitTemplate template = new RabbitTemplate(connectionFactory);
+        template.setMessageConverter(jsonMessageConverter());
+        return template;
+    }
+}
+```
+
+### Key Components
+
+<AccordionGroup>
+  <Accordion title="TopicExchange">
+    A **topic exchange** routes messages based on routing keys with wildcard matching. The `pago.exchange` handles all payment-related events.
+    
+    ```java
+    // Routes messages based on pattern matching
+    pago.*          → Matches pago.confirmado, pago.anulado
+    pago.confirmado → Only matches payment confirmed events
+    ```
+  </Accordion>
+  
+  <Accordion title="Durable Queues">
+    Setting `durable = true` ensures queues survive RabbitMQ restarts:
+    
+    ```java
+    new Queue(PAGO_CONFIRMADO_QUEUE, true);
+    ```
+    
+    Messages in durable queues are persisted to disk.
+  </Accordion>
+  
+  <Accordion title="Message Converter">
+    The `Jackson2JsonMessageConverter` automatically serializes/deserializes Java objects to/from JSON:
+    
+    ```java
+    // Automatically converts
+    PagoConfirmadoEvent event = new PagoConfirmadoEvent();
+    // ↓
+    {"idPago": 123, "monto": 50.00, "timestamp": "..."}
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Message Publishing
+
+### Event Publisher Service
+
+From `paymentService/paymentService/src/main/java/com/koroFoods/paymentService/messaging/PagoEventPublisher.java`:
+
+```java
+package com.koroFoods.paymentService.messaging;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.stereotype.Service;
+
+import com.koroFoods.paymentService.config.RabbitMQConfig;
+import com.koroFoods.paymentService.dtos.PagoAnuladoEvent;
+import com.koroFoods.paymentService.dtos.PagoConfirmadoEvent;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class PagoEventPublisher {
+
+    private final RabbitTemplate rabbitTemplate;
+
+    public void publicarPagoConfirmado(PagoConfirmadoEvent event) {
+        log.info("Publicando evento: Pago Confirmado - ID: {}", event.getIdPago());
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.PAGO_EXCHANGE,
+                RabbitMQConfig.PAGO_CONFIRMADO_ROUTING_KEY,
+                event
+        );
+        log.info("Evento publicado exitosamente");
+    }
+
+    public void publicarPagoAnulado(PagoAnuladoEvent event) {
+        log.info("Publicando evento: Pago Anulado - ID: {}", event.getIdPago());
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.PAGO_EXCHANGE,
+                RabbitMQConfig.PAGO_ANULADO_ROUTING_KEY,
+                event
+        );
+        log.info("Evento publicado exitosamente");
+    }
+}
+```
+
+### Publishing Flow
+
+<Steps>
+  <Step title="Payment Confirmed">
+    Payment Service successfully processes a payment
+  </Step>
+  
+  <Step title="Create Event Object">
+    ```java
+    PagoConfirmadoEvent event = PagoConfirmadoEvent.builder()
+        .idPago(payment.getId())
+        .monto(payment.getAmount())
+        .timestamp(LocalDateTime.now())
+        .build();
+    ```
+  </Step>
+  
+  <Step title="Publish to Exchange">
+    Event publisher sends message to RabbitMQ:
+    ```java
+    pagoEventPublisher.publicarPagoConfirmado(event);
+    ```
+  </Step>
+  
+  <Step title="Exchange Routes Message">
+    Topic exchange routes to bound queues based on routing key
+  </Step>
+  
+  <Step title="Consumers Process Event">
+    Order Service and Reservation Service consume the event
+  </Step>
+</Steps>
+
+## Message Consumption
+
+### Implementing a Consumer
+
+To consume payment events in another service:
+
+```java
+package com.koroFoods.orderService.messaging;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.stereotype.Component;
+
+@Component
+@Slf4j
+public class PaymentEventConsumer {
+
+    @RabbitListener(queues = "pago.confirmado.queue")
+    public void handlePaymentConfirmed(PagoConfirmadoEvent event) {
+        log.info("Received payment confirmed event: {}", event.getIdPago());
+        
+        try {
+            // Update order status
+            orderService.markAsPaid(event.getIdPago());
+            log.info("Order updated successfully");
+        } catch (Exception e) {
+            log.error("Error processing payment event", e);
+            // Message will be requeued or sent to DLQ
+            throw e;
+        }
+    }
+
+    @RabbitListener(queues = "pago.anulado.queue")
+    public void handlePaymentCancelled(PagoAnuladoEvent event) {
+        log.info("Received payment cancelled event: {}", event.getIdPago());
+        
+        // Rollback order
+        orderService.cancelOrder(event.getIdPago());
+    }
+}
+```
+
+<Warning>
+If a consumer throws an exception, RabbitMQ will **requeue the message** by default. Implement proper error handling to avoid infinite loops.
+</Warning>
+
+## Event Types
+
+### Payment Confirmed Event
+
+```java
+@Data
+@Builder
+public class PagoConfirmadoEvent {
+    private Long idPago;
+    private Long idReserva;
+    private Long idPedido;
+    private Double monto;
+    private String metodoPago;
+    private LocalDateTime timestamp;
+    private String numeroTransaccion;
+}
+```
+
+**Published when:**
+- Payment is successfully processed
+- Payment receipt is verified
+- Payment status is updated to CONFIRMED
+
+**Consumed by:**
+- Order Service (to mark order as paid)
+- Reservation Service (to confirm reservation)
+- Notification Service (to send confirmation email)
+
+### Payment Cancelled Event
+
+```java
+@Data
+@Builder
+public class PagoAnuladoEvent {
+    private Long idPago;
+    private Long idReserva;
+    private Long idPedido;
+    private String motivo;
+    private LocalDateTime timestamp;
+}
+```
+
+**Published when:**
+- Payment is cancelled by user
+- Payment fails verification
+- Payment is refunded
+
+**Consumed by:**
+- Order Service (to cancel order)
+- Reservation Service (to release table)
+- Inventory Service (to restore stock)
+
+## Messaging Patterns
+
+<Tabs>
+  <Tab title="Publish-Subscribe">
+    One message published to multiple consumers:
+    
+    ```
+    Payment Service → [pago.exchange] → Queue 1 → Order Service
+                                      → Queue 2 → Reservation Service
+                                      → Queue 3 → Notification Service
+    ```
+    
+    Each service gets its own copy of the message.
+  </Tab>
+  
+  <Tab title="Work Queue">
+    Multiple consumers compete for messages (load distribution):
+    
+    ```
+    Publisher → [Queue] → Consumer 1
+                       → Consumer 2
+                       → Consumer 3
+    ```
+    
+    Each message is delivered to only one consumer.
+  </Tab>
+  
+  <Tab title="Topic Routing">
+    Route messages based on routing key patterns:
+    
+    ```
+    pago.confirmado      → Payment confirmation queue
+    pago.anulado         → Payment cancellation queue
+    pago.*               → All payment events queue
+    pago.#               → All payment-related queues
+    ```
+  </Tab>
+</Tabs>
+
+## Docker Configuration
+
+Payment Service connects to RabbitMQ via environment variables:
+
+```yaml
+payment-service:
+  build: ./paymentService/paymentService
+  ports:
+    - "8085:8085"
+  depends_on:
+    rabbitmq:
+      condition: service_healthy
+  environment:
+    SPRING_RABBITMQ_HOST: rabbitmq
+    SPRING_RABBITMQ_PORT: 5672
+    SPRING_RABBITMQ_USERNAME: guest
+    SPRING_RABBITMQ_PASSWORD: guest
+```
+
+<Tip>
+The `depends_on` condition ensures RabbitMQ is healthy before starting the Payment Service.
+</Tip>
+
+## Message Reliability
+
+### Publisher Confirms
+
+Enable publisher confirms to ensure messages reach RabbitMQ:
+
+```properties
+spring.rabbitmq.publisher-confirm-type=correlated
+spring.rabbitmq.publisher-returns=true
+```
+
+```java
+rabbitTemplate.setConfirmCallback((correlationData, ack, cause) -> {
+    if (ack) {
+        log.info("Message delivered successfully");
+    } else {
+        log.error("Message delivery failed: {}", cause);
+    }
+});
+```
+
+### Consumer Acknowledgments
+
+Configure manual acknowledgments for guaranteed processing:
+
+```properties
+spring.rabbitmq.listener.simple.acknowledge-mode=manual
+```
+
+```java
+@RabbitListener(queues = "pago.confirmado.queue")
+public void handleMessage(PagoConfirmadoEvent event, Channel channel, 
+                          @Header(AmqpHeaders.DELIVERY_TAG) long tag) {
+    try {
+        processEvent(event);
+        channel.basicAck(tag, false); // Acknowledge success
+    } catch (Exception e) {
+        channel.basicNack(tag, false, true); // Reject and requeue
+    }
+}
+```
+
+### Dead Letter Queues
+
+Handle failed messages with DLQ:
+
+```java
+@Bean
+public Queue pagoConfirmadoQueue() {
+    return QueueBuilder.durable(PAGO_CONFIRMADO_QUEUE)
+        .withArgument("x-dead-letter-exchange", "dlx.exchange")
+        .withArgument("x-dead-letter-routing-key", "dlx.pago.confirmado")
+        .withArgument("x-message-ttl", 60000) // 1 minute TTL
+        .build();
+}
+```
+
+## Monitoring and Management
+
+### RabbitMQ Management UI
+
+Access the management interface:
+
+```
+http://localhost:15672
+Username: guest
+Password: guest
+```
+
+**Features:**
+- View queues, exchanges, and bindings
+- Monitor message rates
+- Manually publish/consume messages
+- View consumer connections
+- Check node health
+
+### Key Metrics to Monitor
+
+<CardGroup cols={2}>
+  <Card title="Message Rate" icon="gauge">
+    Messages published and consumed per second
+  </Card>
+  
+  <Card title="Queue Length" icon="list">
+    Number of messages waiting in queues
+  </Card>
+  
+  <Card title="Consumer Count" icon="users">
+    Active consumers per queue
+  </Card>
+  
+  <Card title="Unacked Messages" icon="exclamation-triangle">
+    Messages delivered but not acknowledged
+  </Card>
+</CardGroup>
+
+### CLI Monitoring
+
+```bash
+# List queues and message counts
+docker exec rabbitmq rabbitmqctl list_queues name messages
+
+# List exchanges
+docker exec rabbitmq rabbitmqctl list_exchanges
+
+# List bindings
+docker exec rabbitmq rabbitmqctl list_bindings
+
+# Check cluster status
+docker exec rabbitmq rabbitmqctl cluster_status
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Durable Queues" icon="database">
+    Always set `durable = true` for production queues
+  </Card>
+  
+  <Card title="Implement Idempotency" icon="rotate">
+    Consumers should handle duplicate messages gracefully
+  </Card>
+  
+  <Card title="Set Message TTL" icon="clock">
+    Prevent queues from growing indefinitely
+  </Card>
+  
+  <Card title="Monitor Queue Depth" icon="chart-line">
+    Alert when queues grow beyond threshold
+  </Card>
+  
+  <Card title="Use Dead Letter Queues" icon="skull">
+    Handle failed messages without losing data
+  </Card>
+  
+  <Card title="Version Events" icon="code-branch">
+    Include version field in events for schema evolution
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Messages Not Being Consumed">
+    1. Check if consumer service is running:
+       ```bash
+       docker ps | grep order-service
+       ```
+    
+    2. Verify consumer is registered:
+       ```bash
+       docker exec rabbitmq rabbitmqctl list_consumers
+       ```
+    
+    3. Check consumer logs for errors:
+       ```bash
+       docker logs order-service | grep -i rabbit
+       ```
+  </Accordion>
+  
+  <Accordion title="Connection Refused Errors">
+    Ensure RabbitMQ is healthy:
+    ```bash
+    docker exec rabbitmq rabbitmq-diagnostics ping
+    ```
+    
+    Check service can reach RabbitMQ:
+    ```bash
+    docker exec payment-service ping rabbitmq
+    ```
+  </Accordion>
+  
+  <Accordion title="Messages Stuck in Queue">
+    1. Check for consumer exceptions in logs
+    2. Verify acknowledgment mode is correct
+    3. Manually consume message from UI to test
+    4. Check dead letter queue for failed messages
+  </Accordion>
+</AccordionGroup>
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Payment Service API" icon="credit-card" href="/api-reference/payment-service/payments">
+    Learn about payment event publishing
+  </Card>
+  
+  <Card title="Microservices" icon="cubes" href="/infrastructure/microservices">
+    See how services interact via messaging
+  </Card>
+</CardGroup>

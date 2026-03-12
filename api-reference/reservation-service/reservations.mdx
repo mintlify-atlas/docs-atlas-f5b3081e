@@ -1,0 +1,292 @@
+---
+title: 'Reservations'
+description: 'Manage restaurant reservations'
+---
+
+## Register Reservation
+
+<api-endpoint method="POST" endpoint="/reserva/registro" />
+
+Create a new table reservation for a customer.
+
+### Request Body
+
+<ParamField body="idUsuario" type="integer" required>
+  User ID making the reservation
+</ParamField>
+
+<ParamField body="idMesa" type="integer" required>
+  Table ID to reserve
+</ParamField>
+
+<ParamField body="fechaHora" type="string" required>
+  Reservation date and time in ISO 8601 format
+</ParamField>
+
+<ParamField body="idEvento" type="integer">
+  Event ID if reservation is for a special event (null for regular reservations)
+</ParamField>
+
+<ParamField body="observaciones" type="string">
+  Additional observations or notes
+</ParamField>
+
+### Response
+
+<ResponseField name="valor" type="boolean">
+  Success indicator
+</ResponseField>
+
+<ResponseField name="mensaje" type="string">
+  Response message
+</ResponseField>
+
+<ResponseField name="data" type="integer">
+  ID of the created reservation
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X POST https://api.korofood.com/reserva/registro \
+  -H "Content-Type: application/json" \
+  -d '{
+    "idUsuario": 123,
+    "idMesa": 5,
+    "fechaHora": "2026-03-15T19:00:00",
+    "observaciones": "Window seat preferred"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "valor": true,
+  "mensaje": "Reserva registrada exitosamente",
+  "data": 456
+}
+```
+</ResponseExample>
+
+## Get User Reservations
+
+<api-endpoint method="GET" endpoint="/reserva/mis-reservas/{idUsuario}" />
+
+List all reservations for a specific user.
+
+### Path Parameters
+
+<ParamField path="idUsuario" type="integer" required>
+  User ID to retrieve reservations for
+</ParamField>
+
+### Response
+
+<ResponseField name="valor" type="boolean">
+  Success indicator
+</ResponseField>
+
+<ResponseField name="mensaje" type="string">
+  Response message
+</ResponseField>
+
+<ResponseField name="data" type="array">
+  Array of reservation objects
+  <ResponseField name="idReserva" type="integer">
+    Reservation ID
+  </ResponseField>
+  <ResponseField name="nombreCli" type="string">
+    Customer first name
+  </ResponseField>
+  <ResponseField name="apellidoPa" type="string">
+    Customer paternal surname
+  </ResponseField>
+  <ResponseField name="apellidoMa" type="string">
+    Customer maternal surname
+  </ResponseField>
+  <ResponseField name="numMesa" type="integer">
+    Table number
+  </ResponseField>
+  <ResponseField name="capacidad" type="integer">
+    Table capacity
+  </ResponseField>
+  <ResponseField name="zona" type="string">
+    Table zone (Z1 or Z2)
+  </ResponseField>
+  <ResponseField name="tipoReserva" type="string">
+    Reservation type
+  </ResponseField>
+  <ResponseField name="fechaHora" type="string">
+    Reservation date and time
+  </ResponseField>
+  <ResponseField name="estado" type="string">
+    Reservation status (PENDIENTE, PAGADA, ASISTIDA, CANCELADA, VENCIDA)
+  </ResponseField>
+  <ResponseField name="observaciones" type="string">
+    Additional observations
+  </ResponseField>
+  <ResponseField name="idEvento" type="integer">
+    Event ID if applicable
+  </ResponseField>
+  <ResponseField name="nombreEvento" type="string">
+    Event name if applicable
+  </ResponseField>
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl https://api.korofood.com/reserva/mis-reservas/123
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "valor": true,
+  "mensaje": "Reservas encontradas",
+  "data": [
+    {
+      "idReserva": 456,
+      "nombreCli": "Juan",
+      "apellidoPa": "Pérez",
+      "apellidoMa": "García",
+      "numMesa": 5,
+      "capacidad": 4,
+      "zona": "Z1",
+      "tipoReserva": "NORMAL",
+      "fechaHora": "2026-03-15T19:00:00",
+      "estado": "PAGADA",
+      "observaciones": "Window seat preferred"
+    }
+  ]
+}
+```
+</ResponseExample>
+
+## Cancel Reservation
+
+<api-endpoint method="PATCH" endpoint="/reserva/cancelar/{idReserva}" />
+
+Cancel a paid reservation.
+
+### Path Parameters
+
+<ParamField path="idReserva" type="integer" required>
+  Reservation ID to cancel
+</ParamField>
+
+### Response
+
+<ResponseField name="valor" type="boolean">
+  Success indicator
+</ResponseField>
+
+<ResponseField name="mensaje" type="string">
+  Response message
+</ResponseField>
+
+<ResponseField name="data" type="integer">
+  ID of the cancelled reservation
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X PATCH https://api.korofood.com/reserva/cancelar/456
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "valor": true,
+  "mensaje": "Reserva cancelada exitosamente",
+  "data": 456
+}
+```
+</ResponseExample>
+
+## Check Table Availability
+
+<api-endpoint method="GET" endpoint="/reserva/ocupada" />
+
+Validate if a table is occupied at a specific date and time.
+
+### Query Parameters
+
+<ParamField query="mesaId" type="integer" required>
+  Table ID to check
+</ParamField>
+
+<ParamField query="fechaHora" type="string" required>
+  Date and time to check in ISO 8601 format
+</ParamField>
+
+<ParamField query="esEvento" type="boolean" default="false">
+  Whether this is for an event
+</ParamField>
+
+### Response
+
+<ResponseField name="valor" type="boolean">
+  Success indicator
+</ResponseField>
+
+<ResponseField name="mensaje" type="string">
+  Response message
+</ResponseField>
+
+<ResponseField name="data" type="boolean">
+  True if table is occupied, false if available
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl "https://api.korofood.com/reserva/ocupada?mesaId=5&fechaHora=2026-03-15T19:00:00&esEvento=false"
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "valor": true,
+  "mensaje": "Validación realizada",
+  "data": false
+}
+```
+</ResponseExample>
+
+## Dashboard Counts
+
+<api-endpoint method="GET" endpoint="/reserva/dashboard/recepcionista/counts" />
+
+Get reservation statistics for receptionist dashboard.
+
+### Response
+
+<ResponseField name="totalReservasHoy" type="integer">
+  Total reservations for today
+</ResponseField>
+
+<ResponseField name="reservasAsistidas" type="integer">
+  Number of attended reservations
+</ResponseField>
+
+<ResponseField name="reservasPendientes" type="integer">
+  Number of pending reservations
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl https://api.korofood.com/reserva/dashboard/recepcionista/counts
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "totalReservasHoy": 25,
+  "reservasAsistidas": 15,
+  "reservasPendientes": 10
+}
+```
+</ResponseExample>

@@ -1,0 +1,822 @@
+---
+title: 'Database Setup'
+description: 'Configure PostgreSQL, MongoDB, and Redis for KoroFood Restaurant Management System'
+icon: 'database'
+---
+
+## Overview
+
+KoroFood's Restaurant Management System uses a polyglot persistence approach with three database technologies:
+
+- **PostgreSQL**: Primary relational database for transactional data
+- **MongoDB**: NoSQL database for chat messages and logs
+- **Redis**: In-memory cache for sessions and performance optimization
+
+Each microservice has its own isolated database to maintain service independence and data encapsulation.
+
+## Database Architecture
+
+<CardGroup cols={3}>
+  <Card title="PostgreSQL" icon="elephant" iconType="solid">
+    **Version:** 16 Alpine
+    
+    **Port:** 5433:5432
+    
+    **Databases:** 8 service databases
+    
+    **Purpose:** Transactional data
+  </Card>
+  
+  <Card title="MongoDB" icon="leaf" iconType="solid">
+    **Version:** 7
+    
+    **Port:** 27017
+    
+    **Database:** DB_MENSAJES
+    
+    **Purpose:** Chat messages
+  </Card>
+  
+  <Card title="Redis" icon="bolt" iconType="solid">
+    **Version:** Alpine
+    
+    **Port:** 6379
+    
+    **Purpose:** Caching & sessions
+  </Card>
+</CardGroup>
+
+## PostgreSQL Setup
+
+### Database Structure
+
+The system uses a **database-per-service** pattern, where each microservice has its own PostgreSQL database:
+
+<Accordion title="Service Databases">
+  | Database | Service | Purpose |
+  |----------|---------|----------|
+  | `DB_USER_SERVICE` | User Service | User accounts, profiles, authentication |
+  | `DB_TABLE_SERVICE` | Table Service | Table availability and assignments |
+  | `DB_RESERVATION_SERVICE` | Reservation Service | Booking information and confirmations |
+  | `DB_QUALIFICATION_SERVICE` | Qualification Service | Ratings and reviews |
+  | `DB_PAYMENT_SERVICE` | Payment Service | Payment transactions and receipts |
+  | `DB_ORDER_SERVICE` | Order Service | Customer orders and order items |
+  | `DB_MENU_SERVICE` | Menu Service | Menu items and categories |
+  | `DB_EVENT_SERVICE` | Event Service | Special events and promotions |
+</Accordion>
+
+### Docker Configuration
+
+PostgreSQL is configured in `docker-compose.yml`:
+
+```yaml
+postgres:
+  image: postgres:16-alpine
+  ports:
+    - "5433:5432"  # External:Internal port mapping
+  environment:
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: sql
+  volumes:
+    - postgres_data:/var/lib/postgresql/data
+    - ./init-db.sh:/docker-entrypoint-initdb.d/01-init-db.sh
+    - ./userService/userService/DataBase/TABLAS_INSERTS.sql:/docker-entrypoint-initdb.d/scripts/user-tablas.sql
+    - ./userService/userService/DataBase/DATA_INSERTS.sql:/docker-entrypoint-initdb.d/scripts/user-inserts.sql
+    # ... additional volume mappings for other services
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U postgres"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+```
+
+<Note>
+  **Port Mapping:** The database runs on port 5432 inside the container but is exposed as port 5433 on the host to avoid conflicts with existing PostgreSQL installations.
+</Note>
+
+### Initialization Process
+
+PostgreSQL automatically initializes on first startup using the `init-db.sh` script:
+
+<Steps>
+  <Step title="Create Databases">
+    The initialization script creates all 8 databases:
+    
+    ```bash
+    #!/bin/bash
+    set -e
+    
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL
+        CREATE DATABASE "DB_USER_SERVICE";
+        CREATE DATABASE "DB_TABLE_SERVICE";
+        CREATE DATABASE "DB_RESERVATION_SERVICE";
+        CREATE DATABASE "DB_PAYMENT_SERVICE";
+        CREATE DATABASE "DB_ORDER_SERVICE";
+        CREATE DATABASE "DB_MENU_SERVICE";
+        CREATE DATABASE "DB_EVENT_SERVICE";
+        CREATE DATABASE "DB_QUALIFICATION_SERVICE";
+    EOSQL
+    ```
+    
+    <Warning>
+      The script uses `set -e` to exit immediately if any command fails, ensuring database consistency.
+    </Warning>
+  </Step>
+  
+  <Step title="Apply Schema (TABLAS)">
+    Schema files create tables, indexes, and constraints for each database:
+    
+    ```bash
+    # User Service schema
+    psql --username "$POSTGRES_USER" --dbname="DB_USER_SERVICE" \
+      -f /docker-entrypoint-initdb.d/scripts/user-tablas.sql
+    
+    # Table Service schema
+    psql --username "$POSTGRES_USER" --dbname="DB_TABLE_SERVICE" \
+      -f /docker-entrypoint-initdb.d/scripts/table-tablas.sql
+    
+    # ... similar for all services
+    ```
+    
+    Each `TABLAS_*_INSERT.sql` file contains:
+    - Table definitions
+    - Primary and foreign keys
+    - Indexes for performance
+    - Check constraints
+  </Step>
+  
+  <Step title="Load Initial Data (DATA)">
+    Data files populate tables with default values:
+    
+    ```bash
+    # User Service data
+    psql --username "$POSTGRES_USER" --dbname="DB_USER_SERVICE" \
+      -f /docker-entrypoint-initdb.d/scripts/user-inserts.sql
+    
+    # Table Service data
+    psql --username "$POSTGRES_USER" --dbname="DB_TABLE_SERVICE" \
+      -f /docker-entrypoint-initdb.d/scripts/table-inserts.sql
+    
+    # ... similar for all services
+    ```
+    
+    Typical seed data includes:
+    - Default user accounts (admin, test users)
+    - Table configurations
+    - Menu items
+    - Sample events
+  </Step>
+</Steps>
+
+### Manual Database Operations
+
+<AccordionGroup>
+  <Accordion title="Connect to PostgreSQL Container">
+    Access the PostgreSQL container shell:
+    
+    ```bash
+    # Connect to container
+    docker exec -it korofood-s-postgres-1 bash
+    
+    # Connect to PostgreSQL
+    psql -U postgres
+    
+    # Or connect directly
+    docker exec -it korofood-s-postgres-1 psql -U postgres
+    ```
+  </Accordion>
+  
+  <Accordion title="List All Databases">
+    ```sql
+    -- From psql prompt
+    \l
+    
+    -- Or using SQL
+    SELECT datname FROM pg_database WHERE datistemplate = false;
+    ```
+    
+    Expected output:
+    ```
+    DB_USER_SERVICE
+    DB_TABLE_SERVICE
+    DB_RESERVATION_SERVICE
+    DB_QUALIFICATION_SERVICE
+    DB_PAYMENT_SERVICE
+    DB_ORDER_SERVICE
+    DB_MENU_SERVICE
+    DB_EVENT_SERVICE
+    ```
+  </Accordion>
+  
+  <Accordion title="Connect to Specific Database">
+    ```bash
+    # From host machine
+    docker exec -it korofood-s-postgres-1 psql -U postgres -d DB_USER_SERVICE
+    
+    # From psql prompt
+    \c DB_USER_SERVICE
+    ```
+    
+    List tables in database:
+    ```sql
+    \dt
+    
+    -- Or
+    SELECT table_name FROM information_schema.tables 
+    WHERE table_schema = 'public';
+    ```
+  </Accordion>
+  
+  <Accordion title="Backup Database">
+    ```bash
+    # Backup single database
+    docker exec korofood-s-postgres-1 pg_dump -U postgres DB_USER_SERVICE > user_service_backup.sql
+    
+    # Backup all databases
+    docker exec korofood-s-postgres-1 pg_dumpall -U postgres > all_databases_backup.sql
+    
+    # Compressed backup
+    docker exec korofood-s-postgres-1 pg_dump -U postgres -Fc DB_USER_SERVICE > user_service_backup.dump
+    ```
+  </Accordion>
+  
+  <Accordion title="Restore Database">
+    ```bash
+    # Restore from SQL file
+    docker exec -i korofood-s-postgres-1 psql -U postgres -d DB_USER_SERVICE < user_service_backup.sql
+    
+    # Restore from compressed dump
+    docker exec -i korofood-s-postgres-1 pg_restore -U postgres -d DB_USER_SERVICE user_service_backup.dump
+    
+    # Drop and recreate before restore
+    docker exec korofood-s-postgres-1 psql -U postgres -c "DROP DATABASE DB_USER_SERVICE;"
+    docker exec korofood-s-postgres-1 psql -U postgres -c "CREATE DATABASE DB_USER_SERVICE;"
+    docker exec -i korofood-s-postgres-1 psql -U postgres -d DB_USER_SERVICE < user_service_backup.sql
+    ```
+  </Accordion>
+  
+  <Accordion title="Reset Database">
+    ```bash
+    # Stop services
+    docker-compose down
+    
+    # Remove PostgreSQL volume
+    docker volume rm korofood-s_postgres_data
+    
+    # Restart services (will reinitialize)
+    docker-compose up -d
+    ```
+    
+    <Warning>
+      This will permanently delete all data in PostgreSQL!
+    </Warning>
+  </Accordion>
+</AccordionGroup>
+
+### Connection Strings
+
+Each microservice connects to its own database:
+
+<CodeGroup>
+
+```java User Service
+spring.datasource.url=jdbc:postgresql://postgres:5432/DB_USER_SERVICE
+spring.datasource.username=postgres
+spring.datasource.password=sql
+spring.jpa.hibernate.ddl-auto=none
+```
+
+```java Payment Service
+spring.datasource.url=jdbc:postgresql://postgres:5432/DB_PAYMENT_SERVICE
+spring.datasource.username=postgres
+spring.datasource.password=sql
+spring.jpa.hibernate.ddl-auto=none
+```
+
+```java Order Service
+spring.datasource.url=jdbc:postgresql://postgres:5432/DB_ORDER_SERVICE
+spring.datasource.username=postgres
+spring.datasource.password=sql
+spring.jpa.hibernate.ddl-auto=none
+```
+
+</CodeGroup>
+
+<Note>
+  **Internal Networking:** Services use `postgres` as the hostname (Docker service name), not `localhost`. Port 5432 is used internally, while 5433 is only for external access.
+</Note>
+
+## MongoDB Setup
+
+### Purpose
+
+MongoDB stores chat messages and conversation logs from the AI-powered customer support chatbot.
+
+**Database:** `DB_MENSAJES`
+
+**Used by:** User Service
+
+### Docker Configuration
+
+```yaml
+mongodb:
+  image: mongo:7
+  ports:
+    - "27017:27017"
+  volumes:
+    - mongo_data:/data/db
+  healthcheck:
+    test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+```
+
+### Connection String
+
+```properties
+# User Service
+spring.data.mongodb.uri=mongodb://mongodb:27017/DB_MENSAJES
+```
+
+### Collections
+
+MongoDB automatically creates collections as needed. Typical collections include:
+
+- **messages**: Chat messages between users and the AI bot
+- **conversations**: Conversation metadata and history
+- **sessions**: User session information
+
+### MongoDB Operations
+
+<AccordionGroup>
+  <Accordion title="Connect to MongoDB">
+    ```bash
+    # Connect to MongoDB container
+    docker exec -it korofood-s-mongodb-1 mongosh
+    
+    # Use specific database
+    use DB_MENSAJES
+    
+    # Show collections
+    show collections
+    ```
+  </Accordion>
+  
+  <Accordion title="Query Messages">
+    ```javascript
+    // From mongosh
+    use DB_MENSAJES
+    
+    // Count messages
+    db.messages.countDocuments()
+    
+    // Find recent messages
+    db.messages.find().sort({timestamp: -1}).limit(10)
+    
+    // Find messages by user
+    db.messages.find({userId: "user123"})
+    
+    // Aggregate messages by date
+    db.messages.aggregate([
+      { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$timestamp" }}, count: { $sum: 1 } } }
+    ])
+    ```
+  </Accordion>
+  
+  <Accordion title="Backup MongoDB">
+    ```bash
+    # Backup database
+    docker exec korofood-s-mongodb-1 mongodump --db=DB_MENSAJES --out=/tmp/backup
+    docker cp korofood-s-mongodb-1:/tmp/backup ./mongo_backup
+    
+    # Backup specific collection
+    docker exec korofood-s-mongodb-1 mongodump --db=DB_MENSAJES --collection=messages --out=/tmp/backup
+    ```
+  </Accordion>
+  
+  <Accordion title="Restore MongoDB">
+    ```bash
+    # Copy backup to container
+    docker cp ./mongo_backup korofood-s-mongodb-1:/tmp/backup
+    
+    # Restore database
+    docker exec korofood-s-mongodb-1 mongorestore --db=DB_MENSAJES /tmp/backup/DB_MENSAJES
+    ```
+  </Accordion>
+  
+  <Accordion title="Clear Old Messages">
+    ```javascript
+    // Delete messages older than 30 days
+    use DB_MENSAJES
+    
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    db.messages.deleteMany({
+      timestamp: { $lt: thirtyDaysAgo }
+    })
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Redis Setup
+
+### Purpose
+
+Redis provides high-performance caching for:
+
+- User sessions and tokens
+- Frequently accessed data
+- Rate limiting
+- Temporary data storage
+
+**Used by:** User Service, Qualification Service
+
+### Docker Configuration
+
+```yaml
+redis:
+  image: redis:alpine
+  ports:
+    - "6379:6379"
+  healthcheck:
+    test: ["CMD", "redis-cli", "ping"]
+    interval: 10s
+    timeout: 3s
+    retries: 5
+```
+
+### Connection Configuration
+
+```properties
+# User Service & Qualification Service
+spring.data.redis.host=redis
+spring.data.redis.port=6379
+spring.cache.type=redis
+```
+
+### Redis Operations
+
+<AccordionGroup>
+  <Accordion title="Connect to Redis">
+    ```bash
+    # Connect to Redis container
+    docker exec -it korofood-s-redis-1 redis-cli
+    
+    # Test connection
+    PING
+    # Response: PONG
+    ```
+  </Accordion>
+  
+  <Accordion title="Monitor Cache Activity">
+    ```bash
+    # Real-time monitoring
+    docker exec -it korofood-s-redis-1 redis-cli MONITOR
+    
+    # Get cache statistics
+    docker exec -it korofood-s-redis-1 redis-cli INFO stats
+    
+    # Check memory usage
+    docker exec -it korofood-s-redis-1 redis-cli INFO memory
+    ```
+  </Accordion>
+  
+  <Accordion title="View Cached Keys">
+    ```bash
+    # From redis-cli
+    # List all keys (use cautiously in production)
+    KEYS *
+    
+    # Count keys
+    DBSIZE
+    
+    # Get key value
+    GET key_name
+    
+    # Get key TTL
+    TTL key_name
+    
+    # View key type
+    TYPE key_name
+    ```
+  </Accordion>
+  
+  <Accordion title="Clear Cache">
+    ```bash
+    # Clear all cached data
+    docker exec -it korofood-s-redis-1 redis-cli FLUSHALL
+    
+    # Clear current database only
+    docker exec -it korofood-s-redis-1 redis-cli FLUSHDB
+    
+    # Delete specific key
+    docker exec -it korofood-s-redis-1 redis-cli DEL key_name
+    
+    # Delete keys matching pattern
+    docker exec -it korofood-s-redis-1 redis-cli --scan --pattern 'session:*' | xargs docker exec -i korofood-s-redis-1 redis-cli DEL
+    ```
+    
+    <Warning>
+      FLUSHALL will clear all cached data. Services will need to rebuild the cache.
+    </Warning>
+  </Accordion>
+  
+  <Accordion title="Performance Tuning">
+    Configure Redis for production:
+    
+    ```yaml
+    redis:
+      image: redis:alpine
+      command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+      ports:
+        - "6379:6379"
+    ```
+    
+    Common policies:
+    - `allkeys-lru`: Evict least recently used keys
+    - `volatile-ttl`: Evict keys with shortest TTL
+    - `noeviction`: Return errors when memory limit reached
+  </Accordion>
+</AccordionGroup>
+
+## Database Migration Strategy
+
+### Initial Setup
+
+For first-time deployment, databases are automatically initialized using the scripts in `init-db.sh`.
+
+### Schema Changes
+
+When you need to modify database schema:
+
+<Steps>
+  <Step title="Create Migration Script">
+    Create SQL migration file for your service:
+    
+    ```sql
+    -- V2__add_user_preferences.sql
+    ALTER TABLE users ADD COLUMN preferences JSONB;
+    CREATE INDEX idx_user_preferences ON users USING gin(preferences);
+    ```
+  </Step>
+  
+  <Step title="Test Migration Locally">
+    ```bash
+    # Apply migration to running database
+    docker exec -i korofood-s-postgres-1 psql -U postgres -d DB_USER_SERVICE < migration.sql
+    
+    # Verify changes
+    docker exec -it korofood-s-postgres-1 psql -U postgres -d DB_USER_SERVICE -c "\d users"
+    ```
+  </Step>
+  
+  <Step title="Update Initialization Scripts">
+    Add migration to service's `TABLAS_*_INSERT.sql` file for new deployments.
+  </Step>
+  
+  <Step title="Apply to Production">
+    ```bash
+    # Backup first!
+    docker exec korofood-s-postgres-1 pg_dump -U postgres DB_USER_SERVICE > backup.sql
+    
+    # Apply migration
+    docker exec -i korofood-s-postgres-1 psql -U postgres -d DB_USER_SERVICE < migration.sql
+    
+    # Verify
+    docker-compose restart user-service
+    docker-compose logs -f user-service
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  Consider using a migration tool like [Flyway](https://flywaydb.org/) or [Liquibase](https://www.liquibase.org/) for managing database versions in production.
+</Note>
+
+## Performance Optimization
+
+### PostgreSQL Tuning
+
+<CodeGroup>
+
+```yaml docker-compose.yml
+postgres:
+  image: postgres:16-alpine
+  command:
+    - "postgres"
+    - "-c"
+    - "max_connections=200"
+    - "-c"
+    - "shared_buffers=256MB"
+    - "-c"
+    - "effective_cache_size=1GB"
+    - "-c"
+    - "maintenance_work_mem=64MB"
+    - "-c"
+    - "checkpoint_completion_target=0.9"
+    - "-c"
+    - "wal_buffers=16MB"
+    - "-c"
+    - "default_statistics_target=100"
+```
+
+```sql Indexing Strategy
+-- Add indexes for frequently queried columns
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_reservations_date ON reservations(reservation_date);
+CREATE INDEX idx_orders_status ON orders(status);
+
+-- Composite indexes for common queries
+CREATE INDEX idx_reservations_user_date ON reservations(user_id, reservation_date);
+```
+
+</CodeGroup>
+
+### Connection Pooling
+
+Configure HikariCP in Spring Boot:
+
+```properties
+# Connection pool settings
+spring.datasource.hikari.maximum-pool-size=10
+spring.datasource.hikari.minimum-idle=5
+spring.datasource.hikari.connection-timeout=30000
+spring.datasource.hikari.idle-timeout=600000
+spring.datasource.hikari.max-lifetime=1800000
+```
+
+## Monitoring & Maintenance
+
+### Database Health Checks
+
+<Tabs>
+  <Tab title="PostgreSQL">
+    ```bash
+    # Check connection
+    docker exec korofood-s-postgres-1 pg_isready -U postgres
+    
+    # Check database sizes
+    docker exec -it korofood-s-postgres-1 psql -U postgres -c "SELECT pg_database.datname, pg_size_pretty(pg_database_size(pg_database.datname)) AS size FROM pg_database;"
+    
+    # Check active connections
+    docker exec -it korofood-s-postgres-1 psql -U postgres -c "SELECT datname, count(*) FROM pg_stat_activity GROUP BY datname;"
+    
+    # Check slow queries
+    docker exec -it korofood-s-postgres-1 psql -U postgres -c "SELECT pid, query, query_start FROM pg_stat_activity WHERE state = 'active' AND query_start < NOW() - INTERVAL '5 minutes';"
+    ```
+  </Tab>
+  
+  <Tab title="MongoDB">
+    ```bash
+    # Server status
+    docker exec korofood-s-mongodb-1 mongosh --eval "db.serverStatus()"
+    
+    # Database stats
+    docker exec korofood-s-mongodb-1 mongosh DB_MENSAJES --eval "db.stats()"
+    
+    # Collection stats
+    docker exec korofood-s-mongodb-1 mongosh DB_MENSAJES --eval "db.messages.stats()"
+    
+    # Current operations
+    docker exec korofood-s-mongodb-1 mongosh --eval "db.currentOp()"
+    ```
+  </Tab>
+  
+  <Tab title="Redis">
+    ```bash
+    # Server info
+    docker exec korofood-s-redis-1 redis-cli INFO
+    
+    # Memory usage
+    docker exec korofood-s-redis-1 redis-cli INFO memory
+    
+    # Key statistics
+    docker exec korofood-s-redis-1 redis-cli INFO keyspace
+    
+    # Slow log
+    docker exec korofood-s-redis-1 redis-cli SLOWLOG GET 10
+    ```
+  </Tab>
+</Tabs>
+
+### Backup Strategy
+
+<Steps>
+  <Step title="Daily Backups">
+    Create automated backup script:
+    
+    ```bash
+    #!/bin/bash
+    # backup-databases.sh
+    
+    BACKUP_DIR="/backups/$(date +%Y%m%d)"
+    mkdir -p $BACKUP_DIR
+    
+    # Backup PostgreSQL
+    docker exec korofood-s-postgres-1 pg_dumpall -U postgres > $BACKUP_DIR/postgres_all.sql
+    
+    # Backup MongoDB
+    docker exec korofood-s-mongodb-1 mongodump --out=/tmp/backup
+    docker cp korofood-s-mongodb-1:/tmp/backup $BACKUP_DIR/mongodb
+    
+    # Compress backups
+    tar -czf $BACKUP_DIR.tar.gz $BACKUP_DIR
+    rm -rf $BACKUP_DIR
+    ```
+  </Step>
+  
+  <Step title="Schedule with Cron">
+    ```bash
+    # Add to crontab
+    0 2 * * * /path/to/backup-databases.sh
+    ```
+  </Step>
+  
+  <Step title="Retention Policy">
+    ```bash
+    # Keep daily backups for 7 days, weekly for 4 weeks
+    find /backups -name "*.tar.gz" -mtime +7 -delete
+    ```
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="PostgreSQL container won't start">
+    Check logs for errors:
+    ```bash
+    docker-compose logs postgres
+    ```
+    
+    Common issues:
+    - Corrupted data directory: Remove volume and reinitialize
+    - Port conflict: Change external port in docker-compose.yml
+    - Insufficient permissions: Check volume mount permissions
+  </Accordion>
+  
+  <Accordion title="Service can't connect to database">
+    Verify:
+    1. Database is healthy: `docker-compose ps postgres`
+    2. Database exists: `docker exec -it korofood-s-postgres-1 psql -U postgres -l`
+    3. Credentials are correct in docker-compose.yml
+    4. Service is on same Docker network
+    
+    Test connection:
+    ```bash
+    docker exec korofood-s-user-service-1 nc -zv postgres 5432
+    ```
+  </Accordion>
+  
+  <Accordion title="Database initialization fails">
+    Check init script logs:
+    ```bash
+    docker-compose logs postgres | grep "init-db"
+    ```
+    
+    Manually run initialization:
+    ```bash
+    docker exec -i korofood-s-postgres-1 bash /docker-entrypoint-initdb.d/01-init-db.sh
+    ```
+  </Accordion>
+  
+  <Accordion title="MongoDB connection timeout">
+    Verify MongoDB is running:
+    ```bash
+    docker-compose ps mongodb
+    docker exec korofood-s-mongodb-1 mongosh --eval "db.adminCommand('ping')"
+    ```
+    
+    Check connection string in service configuration.
+  </Accordion>
+  
+  <Accordion title="Redis out of memory">
+    Check memory usage:
+    ```bash
+    docker exec korofood-s-redis-1 redis-cli INFO memory
+    ```
+    
+    Clear cache or increase memory limit:
+    ```bash
+    docker exec korofood-s-redis-1 redis-cli FLUSHALL
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={3}>
+  <Card title="Docker Deployment" icon="docker" href="/deployment/docker">
+    Complete Docker setup guide
+  </Card>
+  
+  <Card title="Environment Variables" icon="gear" href="/deployment/environment-variables">
+    Configure environment variables
+  </Card>
+  
+  <Card title="Caching" icon="bolt" href="/infrastructure/caching">
+    Redis caching strategies
+  </Card>
+</CardGroup>

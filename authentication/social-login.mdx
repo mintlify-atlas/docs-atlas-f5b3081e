@@ -1,0 +1,655 @@
+---
+title: 'Social Login'
+description: 'Implement GitHub and Google authentication in your application'
+icon: 'users'
+---
+
+## Overview
+
+KoroFood's Restaurant Management System supports social authentication through GitHub and Google OAuth providers. This allows users to sign in using their existing social accounts without creating a separate password.
+
+## Supported Providers
+
+<CardGroup cols={2}>
+  <Card title="GitHub Login" icon="github">
+    Authenticate users with their GitHub accounts
+  </Card>
+  <Card title="Google Login" icon="google">
+    Authenticate users with their Google accounts
+  </Card>
+</CardGroup>
+
+## GitHub Login Flow
+
+### Step 1: Initiate GitHub OAuth
+
+Redirect users to GitHub's authorization page:
+
+```javascript
+const GITHUB_CLIENT_ID = 'your_github_client_id';
+const REDIRECT_URI = 'http://localhost:3000/auth/github/callback';
+
+const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${REDIRECT_URI}&scope=user:email`;
+
+window.location.href = githubAuthUrl;
+```
+
+<ParamField query="client_id" type="string" required>
+  Your GitHub OAuth application client ID
+</ParamField>
+
+<ParamField query="redirect_uri" type="string" required>
+  URL where GitHub will redirect after authorization
+</ParamField>
+
+<ParamField query="scope" type="string">
+  Requested permissions (e.g., `user:email` to access user's email addresses)
+</ParamField>
+
+### Step 2: Handle OAuth Callback
+
+After user authorization, GitHub redirects to your callback URL with an authorization code:
+
+```javascript
+// Extract code from URL parameters
+const urlParams = new URLSearchParams(window.location.search);
+const code = urlParams.get('code');
+
+if (code) {
+  // Send code to your backend
+  authenticateWithGitHub(code);
+}
+```
+
+### Step 3: Exchange Code for Token
+
+Send the authorization code to the KoroFood API:
+
+<CodeGroup>
+```bash cURL
+curl -X POST "http://localhost:8080/auth/github?code=YOUR_AUTHORIZATION_CODE" \
+  -H "Content-Type: application/json"
+```
+
+```javascript JavaScript
+const authenticateWithGitHub = async (code) => {
+  try {
+    const response = await fetch(`http://localhost:8080/auth/github?code=${code}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const data = await response.json();
+    handleAuthResponse(data);
+  } catch (error) {
+    console.error('GitHub authentication failed:', error);
+  }
+};
+```
+
+```python Python
+import requests
+
+def authenticate_with_github(code):
+    url = f'http://localhost:8080/auth/github'
+    params = {'code': code}
+    
+    response = requests.post(url, params=params)
+    data = response.json()
+    
+    return handle_auth_response(data)
+```
+</CodeGroup>
+
+### Request Parameters
+
+<ParamField query="code" type="string" required>
+  Authorization code received from GitHub OAuth callback
+</ParamField>
+
+### Response Scenarios
+
+<CodeGroup>
+```json Existing User
+{
+  "usuarioExistente": true,
+  "token": "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlcyI6WyJST0xFX0NMSUVOVRFMX0FETUlOIl0sInN1YiI6InVzZXJAZXhhbXBsZS5jb20iLCJpYXQiOjE2Nzg4ODY0MDAsImV4cCI6MTY3ODkyMjQwMH0.signature",
+  "tempToken": null,
+  "socialUserDataDto": null
+}
+```
+
+```json New User (Registration Required)
+{
+  "usuarioExistente": false,
+  "token": null,
+  "tempToken": "temp_eyJhbGc...",
+  "socialUserDataDto": {
+    "nombre": "John Doe",
+    "email": "john@example.com",
+    "avatar": "https://avatars.githubusercontent.com/u/12345",
+    "provider": "github"
+  }
+}
+```
+</CodeGroup>
+
+## Google Login Flow
+
+### Step 1: Set Up Google Sign-In
+
+Include the Google Sign-In JavaScript library:
+
+```html
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+```
+
+### Step 2: Initialize Google Sign-In
+
+Create a Google Sign-In button:
+
+```html
+<div id="g_id_onload"
+     data-client_id="YOUR_GOOGLE_CLIENT_ID"
+     data-callback="handleGoogleSignIn">
+</div>
+<div class="g_id_signin" data-type="standard"></div>
+```
+
+```javascript
+function handleGoogleSignIn(response) {
+  // response.credential contains the ID token
+  authenticateWithGoogle(response.credential);
+}
+```
+
+### Step 3: Send ID Token to Backend
+
+Send the Google ID token to the KoroFood API:
+
+<CodeGroup>
+```bash cURL
+curl -X POST http://localhost:8080/auth/google \
+  -H "Content-Type: application/json" \
+  -d '{
+    "idToken": "eyJhbGciOiJSUzI1NiIsImtpZCI6..."
+  }'
+```
+
+```javascript JavaScript
+const authenticateWithGoogle = async (idToken) => {
+  try {
+    const response = await fetch('http://localhost:8080/auth/google', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        idToken: idToken
+      })
+    });
+
+    const data = await response.json();
+    handleAuthResponse(data);
+  } catch (error) {
+    console.error('Google authentication failed:', error);
+  }
+};
+```
+
+```python Python
+import requests
+
+def authenticate_with_google(id_token):
+    url = 'http://localhost:8080/auth/google'
+    data = {'idToken': id_token}
+    
+    response = requests.post(url, json=data)
+    return handle_auth_response(response.json())
+```
+</CodeGroup>
+
+### Request Body
+
+<ParamField body="idToken" type="string" required>
+  Google ID token obtained from Google Sign-In client library
+</ParamField>
+
+### Response Scenarios
+
+Google authentication returns the same response structure as GitHub:
+
+<CodeGroup>
+```json Existing User
+{
+  "usuarioExistente": true,
+  "token": "eyJhbGciOiJIUzI1NiJ9...",
+  "tempToken": null,
+  "socialUserDataDto": null
+}
+```
+
+```json New User (Registration Required)
+{
+  "usuarioExistente": false,
+  "token": null,
+  "tempToken": "temp_eyJhbGc...",
+  "socialUserDataDto": {
+    "nombre": "Jane Smith",
+    "email": "jane@gmail.com",
+    "avatar": "https://lh3.googleusercontent.com/...",
+    "provider": "google"
+  }
+}
+```
+</CodeGroup>
+
+## Handling Authentication Response
+
+Implement logic to handle both existing and new user scenarios:
+
+```javascript
+const handleAuthResponse = (data) => {
+  if (data.usuarioExistente) {
+    // Existing user - store JWT token and redirect to app
+    localStorage.setItem('authToken', data.token);
+    window.location.href = '/dashboard';
+  } else {
+    // New user - store temporary token and redirect to registration
+    localStorage.setItem('tempToken', data.tempToken);
+    localStorage.setItem('socialUserData', JSON.stringify(data.socialUserDataDto));
+    window.location.href = '/register/complete';
+  }
+};
+```
+
+## Completing Social Registration
+
+When a user authenticates via social login for the first time, they must complete registration with additional information.
+
+### Registration Completion Endpoint
+
+```http
+POST /auth/social/register
+Content-Type: application/json
+```
+
+### Request Body
+
+<CodeGroup>
+```bash cURL
+curl -X POST http://localhost:8080/auth/social/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tempToken": "temp_eyJhbGc...",
+    "nombres": "John",
+    "correo": "john@example.com",
+    "imagen": "https://avatars.githubusercontent.com/u/12345",
+    "provider": "github",
+    "apePaterno": "Doe",
+    "apeMaterno": "Smith",
+    "tipoDocumento": "DNI",
+    "nroDoc": "12345678",
+    "telefono": "+51987654321",
+    "direccion": "123 Main St",
+    "idDistrito": 1,
+    "clave": "optional_password"
+  }'
+```
+
+```javascript JavaScript
+const completeRegistration = async (formData) => {
+  const tempToken = localStorage.getItem('tempToken');
+  const socialUserData = JSON.parse(localStorage.getItem('socialUserData'));
+
+  const requestBody = {
+    tempToken: tempToken,
+    nombres: socialUserData.nombre,
+    correo: socialUserData.email,
+    imagen: socialUserData.avatar,
+    provider: socialUserData.provider,
+    apePaterno: formData.apePaterno,
+    apeMaterno: formData.apeMaterno,
+    tipoDocumento: formData.tipoDocumento,
+    nroDoc: formData.nroDoc,
+    telefono: formData.telefono,
+    direccion: formData.direccion,
+    idDistrito: formData.idDistrito,
+    clave: formData.clave || null
+  };
+
+  try {
+    const response = await fetch('http://localhost:8080/auth/social/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    const data = await response.json();
+    
+    if (data.valor) {
+      // Registration successful - token is in data.dato
+      localStorage.removeItem('tempToken');
+      localStorage.removeItem('socialUserData');
+      localStorage.setItem('authToken', data.dato.token);
+      window.location.href = '/dashboard';
+    } else {
+      console.error('Registration failed:', data.mensaje);
+    }
+  } catch (error) {
+    console.error('Error completing registration:', error);
+  }
+};
+```
+</CodeGroup>
+
+### Request Parameters
+
+<ParamField body="tempToken" type="string" required>
+  Temporary token received from initial social authentication
+</ParamField>
+
+<ParamField body="nombres" type="string" required>
+  User's first name (from social provider)
+</ParamField>
+
+<ParamField body="correo" type="string" required>
+  User's email address (from social provider)
+</ParamField>
+
+<ParamField body="imagen" type="string" required>
+  URL to user's profile picture (from social provider)
+</ParamField>
+
+<ParamField body="provider" type="string" required>
+  Social provider name: "github" or "google"
+</ParamField>
+
+<ParamField body="apePaterno" type="string" required>
+  User's paternal last name
+</ParamField>
+
+<ParamField body="apeMaterno" type="string" required>
+  User's maternal last name
+</ParamField>
+
+<ParamField body="tipoDocumento" type="string" required>
+  Document type: "DNI", "CARNET_EXTRANJERIA", "PASAPORTE", "RUC"
+</ParamField>
+
+<ParamField body="nroDoc" type="string" required>
+  Document number
+</ParamField>
+
+<ParamField body="telefono" type="string" required>
+  User's phone number (include country code)
+</ParamField>
+
+<ParamField body="direccion" type="string" required>
+  User's street address
+</ParamField>
+
+<ParamField body="idDistrito" type="number" required>
+  District ID (reference to district table)
+</ParamField>
+
+<ParamField body="clave" type="string">
+  Optional password for future traditional login
+</ParamField>
+
+### Response
+
+<CodeGroup>
+```json 201 Success
+{
+  "valor": true,
+  "mensaje": "Usuario registrado exitosamente",
+  "dato": {
+    "token": "eyJhbGciOiJIUzI1NiJ9...",
+    "usuario": {
+      "id": 123,
+      "nombres": "John",
+      "apePaterno": "Doe",
+      "apeMaterno": "Smith",
+      "correo": "john@example.com",
+      "telefono": "+51987654321",
+      "imagen": "https://avatars.githubusercontent.com/u/12345"
+    }
+  }
+}
+```
+
+```json 400 Bad Request
+{
+  "valor": false,
+  "mensaje": "El correo ya está registrado",
+  "dato": null
+}
+```
+
+```json 500 Internal Server Error
+{
+  "error": "Error completando registro: Invalid tempToken"
+}
+```
+</CodeGroup>
+
+## Complete Implementation Example
+
+Here's a complete example integrating both GitHub and Google login:
+
+```javascript
+class SocialAuth {
+  constructor() {
+    this.apiBase = 'http://localhost:8080/auth';
+  }
+
+  // GitHub login
+  async loginWithGitHub() {
+    const clientId = 'YOUR_GITHUB_CLIENT_ID';
+    const redirectUri = 'http://localhost:3000/auth/github/callback';
+    
+    window.location.href = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=user:email`;
+  }
+
+  async handleGitHubCallback(code) {
+    const response = await fetch(`${this.apiBase}/github?code=${code}`, {
+      method: 'POST'
+    });
+    
+    const data = await response.json();
+    return this.handleAuthResponse(data);
+  }
+
+  // Google login
+  async loginWithGoogle(idToken) {
+    const response = await fetch(`${this.apiBase}/google`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken })
+    });
+    
+    const data = await response.json();
+    return this.handleAuthResponse(data);
+  }
+
+  // Handle authentication response
+  handleAuthResponse(data) {
+    if (data.usuarioExistente) {
+      // Existing user
+      localStorage.setItem('authToken', data.token);
+      return { success: true, requiresRegistration: false };
+    } else {
+      // New user - needs to complete registration
+      localStorage.setItem('tempToken', data.tempToken);
+      localStorage.setItem('socialUserData', JSON.stringify(data.socialUserDataDto));
+      return { success: true, requiresRegistration: true, userData: data.socialUserDataDto };
+    }
+  }
+
+  // Complete registration for new social users
+  async completeRegistration(additionalInfo) {
+    const tempToken = localStorage.getItem('tempToken');
+    const socialData = JSON.parse(localStorage.getItem('socialUserData'));
+
+    const response = await fetch(`${this.apiBase}/social/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tempToken,
+        nombres: socialData.nombre,
+        correo: socialData.email,
+        imagen: socialData.avatar,
+        provider: socialData.provider,
+        ...additionalInfo
+      })
+    });
+
+    const data = await response.json();
+    
+    if (data.valor) {
+      localStorage.removeItem('tempToken');
+      localStorage.removeItem('socialUserData');
+      localStorage.setItem('authToken', data.dato.token);
+      return { success: true };
+    }
+    
+    return { success: false, error: data.mensaje };
+  }
+}
+
+// Usage
+const auth = new SocialAuth();
+
+// GitHub
+document.getElementById('github-btn').addEventListener('click', () => {
+  auth.loginWithGitHub();
+});
+
+// Google (after Google Sign-In callback)
+function handleGoogleSignIn(response) {
+  auth.loginWithGoogle(response.credential).then(result => {
+    if (result.requiresRegistration) {
+      window.location.href = '/register/complete';
+    } else {
+      window.location.href = '/dashboard';
+    }
+  });
+}
+```
+
+## Backend Implementation
+
+The backend implementation for social login is in the `AuthController`:
+
+```java controller/AuthController.java
+// GitHub Login
+@PostMapping("/github")
+public ResponseEntity<?> githubLogin(@RequestParam String code) {
+    try{
+        GithubUserDto githubUserDto = githubService.loginWithGithub(code);
+
+        SocialAuthResponse response = usuarioService.verificarUsuarioRegistrado(
+                githubUserDto.getName(),
+                githubUserDto.getEmail(),
+                githubUserDto.getAvatar(),
+                "github"
+        );
+
+        return ResponseEntity.ok(response);
+    } catch (Exception e) {
+        return ResponseEntity.status(500)
+                .body(Map.of("¡Error' ", "Error en autenticación GitHub: " + e.getMessage()));
+    }
+}
+
+// Google Login
+@PostMapping("/google")
+public ResponseEntity<?> googleLogin(@RequestBody Map<String, String> payload){
+    try {
+        String idToken = payload.get("idToken");
+
+        if (idToken == null || idToken.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Token de Google requerido"));
+        }
+
+        GoogleUserDto googleUserDto = googleService.verifyGoogleToken(idToken);
+
+        SocialAuthResponse response = usuarioService.verificarUsuarioRegistrado(
+                googleUserDto.getName(),
+                googleUserDto.getEmail(),
+                googleUserDto.getAvatar(),
+                "google"
+        );
+        return ResponseEntity.ok(response);
+    } catch (Exception e) {
+        return ResponseEntity.status(500)
+                .body(Map.of("¡Error' ", "Error en autenticación Google: " + e.getMessage()));
+    }
+}
+
+// Complete Registration
+@PostMapping("/social/register")
+public ResponseEntity<?>registrarSocialGitHubGoogle(
+        @RequestBody RegistroSocialRequest request
+        ){
+    try {
+        ResultadoResponse<?> resultado = usuarioService.registraUsuarioSocial(request);
+        if (resultado.isValor()) {
+            return ResponseEntity.status(HttpStatus.CREATED).body(resultado);
+        } else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(resultado);
+        }
+    } catch (Exception e) {
+        return ResponseEntity.status(500)
+                .body(ResultadoResponse.error("Error completando registro: " + e.getMessage()));
+    }
+}
+```
+
+## Security Best Practices
+
+<Warning>
+  **Store Tokens Securely:** Always store authentication tokens in secure storage (httpOnly cookies or secure local storage).
+</Warning>
+
+<Warning>
+  **Validate Temporary Tokens:** The backend should validate temporary tokens have not expired before completing registration.
+</Warning>
+
+<Note>
+  **Optional Password:** Users can optionally set a password during social registration to enable traditional login as a backup.
+</Note>
+
+## Error Handling
+
+<Steps>
+  <Step title="OAuth Errors">
+    Handle OAuth provider errors during authorization flow
+  </Step>
+  <Step title="Network Errors">
+    Implement retry logic for network failures
+  </Step>
+  <Step title="Validation Errors">
+    Display clear validation messages for registration form fields
+  </Step>
+  <Step title="Token Expiration">
+    Check if temporary tokens have expired before submitting registration
+  </Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="JWT Authentication" icon="key" href="/authentication/jwt">
+    Learn about traditional JWT authentication
+  </Card>
+  <Card title="OAuth 2.0" icon="lock" href="/authentication/oauth">
+    Deep dive into OAuth 2.0 implementation
+  </Card>
+</CardGroup>

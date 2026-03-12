@@ -1,122 +1,143 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "KoroFood's Restaurant Management System",
+  "theme": "aspen",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#54acee",
+    "light": "#25679d",
+    "dark": "#25679d"
   },
-  "favicon": "/favicon.svg",
+  "favicon": "https://media.brand.dev/6ab21bc4-ff66-4d45-8219-6a8c6e748847.png",
+  "logo": {
+    "light": "https://media.brand.dev/6ab21bc4-ff66-4d45-8219-6a8c6e748847.png",
+    "dark": "https://media.brand.dev/6ab21bc4-ff66-4d45-8219-6a8c6e748847.png"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/CoDeVeck/KoroFood-s"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/CoDeVeck/KoroFood-s"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Get Started",
             "pages": [
-              "index",
+              "introduction",
               "quickstart",
-              "development"
+              "architecture"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Authentication",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "authentication/overview",
+              "authentication/jwt",
+              "authentication/oauth",
+              "authentication/social-login"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "Deployment",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
+              "deployment/docker",
+              "deployment/environment-variables",
+              "deployment/database-setup"
             ]
           },
           {
-            "group": "AI tools",
+            "group": "Infrastructure",
             "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "infrastructure/microservices",
+              "infrastructure/api-gateway",
+              "infrastructure/service-discovery",
+              "infrastructure/messaging",
+              "infrastructure/caching"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "API Reference",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Overview",
             "pages": [
-              "api-reference/introduction"
+              "api-reference/introduction",
+              "api-reference/base-url",
+              "api-reference/error-handling"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "User Service",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "api-reference/user-service/authentication",
+              "api-reference/user-service/users",
+              "api-reference/user-service/chatbot"
+            ]
+          },
+          {
+            "group": "Reservation Service",
+            "pages": [
+              "api-reference/reservation-service/reservations",
+              "api-reference/reservation-service/availability"
+            ]
+          },
+          {
+            "group": "Table Service",
+            "pages": [
+              "api-reference/table-service/tables",
+              "api-reference/table-service/table-management"
+            ]
+          },
+          {
+            "group": "Order Service",
+            "pages": [
+              "api-reference/order-service/orders",
+              "api-reference/order-service/order-details",
+              "api-reference/order-service/reports"
+            ]
+          },
+          {
+            "group": "Menu Service",
+            "pages": [
+              "api-reference/menu-service/menu",
+              "api-reference/menu-service/dishes",
+              "api-reference/menu-service/tags"
+            ]
+          },
+          {
+            "group": "Event Service",
+            "pages": [
+              "api-reference/event-service/events",
+              "api-reference/event-service/themes",
+              "api-reference/event-service/event-tables"
+            ]
+          },
+          {
+            "group": "Payment Service",
+            "pages": [
+              "api-reference/payment-service/payments",
+              "api-reference/payment-service/payment-methods"
+            ]
+          },
+          {
+            "group": "Qualification Service",
+            "pages": [
+              "api-reference/qualification-service/ratings",
+              "api-reference/qualification-service/reviews"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

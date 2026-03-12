@@ -1,0 +1,290 @@
+---
+title: 'Events'
+description: 'Manage events in the KoroFood system'
+---
+
+## Create Event
+
+<api-endpoint method="POST" endpoint="/eventos" />
+
+Creates a new event in the system.
+
+### Request Body
+
+<ParamField body="nombre" type="string" required>
+  Event name (max 100 characters)
+</ParamField>
+
+<ParamField body="descripcion" type="string">
+  Event description (max 500 characters)
+</ParamField>
+
+<ParamField body="idTematica" type="integer">
+  Theme ID associated with the event
+</ParamField>
+
+<ParamField body="fechaInicio" type="datetime" required>
+  Event start date and time (ISO 8601 format)
+</ParamField>
+
+<ParamField body="fechaFin" type="datetime" required>
+  Event end date and time (ISO 8601 format)
+</ParamField>
+
+<ParamField body="costo" type="decimal" required>
+  Event cost (must be greater than 0)
+</ParamField>
+
+<ParamField body="imagen" type="string">
+  Image URL for the event
+</ParamField>
+
+<ParamField body="imagenBase64" type="string">
+  Base64 encoded image data
+</ParamField>
+
+### Response
+
+<ResponseField name="idEvento" type="integer">
+  Unique identifier for the event
+</ResponseField>
+
+<ResponseField name="nombre" type="string">
+  Event name
+</ResponseField>
+
+<ResponseField name="descripcion" type="string">
+  Event description
+</ResponseField>
+
+<ResponseField name="tematica" type="object">
+  Theme information associated with the event
+  <ResponseField name="idTematica" type="integer">
+    Theme ID
+  </ResponseField>
+  <ResponseField name="nombre" type="string">
+    Theme name
+  </ResponseField>
+  <ResponseField name="activo" type="boolean">
+    Whether the theme is active
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="fechaInicio" type="datetime">
+  Event start date and time
+</ResponseField>
+
+<ResponseField name="fechaFin" type="datetime">
+  Event end date and time
+</ResponseField>
+
+<ResponseField name="costo" type="decimal">
+  Event cost
+</ResponseField>
+
+<ResponseField name="imagen" type="string">
+  Image URL
+</ResponseField>
+
+<ResponseField name="activo" type="boolean">
+  Whether the event is active
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -X POST https://api.korofood.com/eventos \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nombre": "Gala de Fin de Año",
+    "descripcion": "Celebración de fin de año con cena y música en vivo",
+    "idTematica": 1,
+    "fechaInicio": "2026-12-31T20:00:00",
+    "fechaFin": "2027-01-01T02:00:00",
+    "costo": 150.00,
+    "imagen": "https://example.com/images/gala.jpg"
+  }'
+```
+
+---
+
+## List All Events
+
+<api-endpoint method="GET" endpoint="/eventos" />
+
+Retrieves a list of all events in the system.
+
+### Response
+
+Returns an array of event objects with the same structure as the Create Event response.
+
+### Example Request
+
+```bash
+curl -X GET https://api.korofood.com/eventos
+```
+
+---
+
+## List Active Events
+
+<api-endpoint method="GET" endpoint="/eventos/activos" />
+
+Retrieves a list of all active events.
+
+### Response
+
+Returns an array of active event objects.
+
+### Example Request
+
+```bash
+curl -X GET https://api.korofood.com/eventos/activos
+```
+
+---
+
+## List Future Events
+
+<api-endpoint method="GET" endpoint="/eventos/futuros" />
+
+Retrieves a list of events scheduled for the future.
+
+### Response
+
+Returns an array of future event objects.
+
+### Example Request
+
+```bash
+curl -X GET https://api.korofood.com/eventos/futuros
+```
+
+---
+
+## List Events by Theme
+
+<api-endpoint method="GET" endpoint="/eventos/tematica/{idTematica}" />
+
+Retrieves all events associated with a specific theme.
+
+### Path Parameters
+
+<ParamField path="idTematica" type="integer" required>
+  Theme ID to filter events
+</ParamField>
+
+### Response
+
+Returns an array of event objects for the specified theme.
+
+### Example Request
+
+```bash
+curl -X GET https://api.korofood.com/eventos/tematica/1
+```
+
+---
+
+## Get Event by ID
+
+<api-endpoint method="GET" endpoint="/eventos/{id}" />
+
+Retrieves a specific event by its ID.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  Event ID
+</ParamField>
+
+### Response
+
+Returns the event object with all details.
+
+### Example Request
+
+```bash
+curl -X GET https://api.korofood.com/eventos/123
+```
+
+---
+
+## Update Event
+
+<api-endpoint method="PUT" endpoint="/eventos/{id}" />
+
+Updates an existing event.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  Event ID to update
+</ParamField>
+
+### Request Body
+
+Same parameters as Create Event.
+
+### Response
+
+Returns the updated event object.
+
+### Example Request
+
+```bash
+curl -X PUT https://api.korofood.com/eventos/123 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nombre": "Gala de Fin de Año - Actualizada",
+    "descripcion": "Celebración actualizada con nueva información",
+    "idTematica": 1,
+    "fechaInicio": "2026-12-31T19:00:00",
+    "fechaFin": "2027-01-01T03:00:00",
+    "costo": 175.00,
+    "imagen": "https://example.com/images/gala-updated.jpg"
+  }'
+```
+
+---
+
+## Delete Event
+
+<api-endpoint method="DELETE" endpoint="/eventos/{id}" />
+
+Deletes an event from the system.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  Event ID to delete
+</ParamField>
+
+### Response
+
+Returns 204 No Content on successful deletion.
+
+### Example Request
+
+```bash
+curl -X DELETE https://api.korofood.com/eventos/123
+```
+
+---
+
+## Generate Events Report
+
+<api-endpoint method="GET" endpoint="/eventos/reporte/eventos" />
+
+Generates a PDF report of all events in the system.
+
+### Response
+
+Returns a PDF file as binary data with Content-Type: application/pdf.
+
+### Example Request
+
+```bash
+curl -X GET https://api.korofood.com/eventos/reporte/eventos \
+  -o reporte-eventos.pdf
+```

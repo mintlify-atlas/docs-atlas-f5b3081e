@@ -1,0 +1,214 @@
+---
+title: 'Base URLs'
+description: 'API endpoint URLs for different environments and services'
+---
+
+## API Gateway (Recommended)
+
+The API Gateway serves as the single entry point for all microservices in the KoroFood system. Using the API Gateway provides load balancing, service discovery, and centralized routing.
+
+### Local Development
+```
+http://localhost:8098
+```
+
+### Gateway Routing Pattern
+
+The API Gateway automatically routes requests to the appropriate microservice using the following pattern:
+
+```
+http://localhost:8098/{serviceName}/{endpoint}
+```
+
+**Example Requests:**
+
+<CodeGroup>
+```bash User Service via Gateway
+curl http://localhost:8098/userService/auth/me \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "X-Username: user@example.com"
+```
+
+```bash Order Service via Gateway
+curl http://localhost:8098/orderService/pedido \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```bash Event Service via Gateway
+curl http://localhost:8098/eventService/eventos/activos
+```
+</CodeGroup>
+
+<Note>
+  The API Gateway handles service discovery automatically. You don't need to know the individual service ports when using the gateway.
+</Note>
+
+## Direct Service Endpoints
+
+For development, debugging, or direct service access, you can connect to individual microservices using their dedicated ports.
+
+### User Service
+```
+http://localhost:8081
+```
+Handles authentication, user management, and social login.
+
+**Example:**
+```bash
+curl http://localhost:8081/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"correo": "user@example.com", "clave": "password"}'
+```
+
+### Table Service
+```
+http://localhost:8082
+```
+Manages restaurant tables and availability.
+
+**Example:**
+```bash
+curl http://localhost:8082/mesa
+```
+
+### Reservation Service
+```
+http://localhost:8083
+```
+Handles customer reservations and booking slots.
+
+**Example:**
+```bash
+curl http://localhost:8083/reserva/mis-reservas/5
+```
+
+### Qualification Service
+```
+http://localhost:8084
+```
+Manages customer ratings and reviews.
+
+**Example:**
+```bash
+curl http://localhost:8084/calificacion
+```
+
+### Payment Service
+```
+http://localhost:8085
+```
+Processes payments and confirmations.
+
+**Example:**
+```bash
+curl http://localhost:8085/pago/usuario/5
+```
+
+### Order Service
+```
+http://localhost:8086
+```
+Manages customer orders and order tracking.
+
+**Example:**
+```bash
+curl http://localhost:8086/pedido?estado=PENDIENTE
+```
+
+### Menu Service
+```
+http://localhost:8087
+```
+Handles menu items and dish management.
+
+**Example:**
+```bash
+curl http://localhost:8087/menu/pdf
+```
+
+### Event Service
+```
+http://localhost:8088
+```
+Manages special events and themed occasions.
+
+**Example:**
+```bash
+curl http://localhost:8088/eventos/futuros
+```
+
+## Service Discovery
+
+All microservices register themselves with Eureka Service Registry:
+
+### Eureka Server
+```
+http://localhost:8761
+```
+
+You can view the service registry and health status at:
+```
+http://localhost:8761/eureka/apps
+```
+
+<Note>
+  The API Gateway and all microservices automatically discover each other through Eureka, enabling dynamic service routing and load balancing.
+</Note>
+
+## Environment-Specific URLs
+
+### Development Environment
+- **API Gateway**: `http://localhost:8098`
+- **Individual Services**: `http://localhost:808X` (where X is the service port)
+
+### Production Environment
+
+<Warning>
+  Production URLs should be configured using environment variables:
+  - `SPRING_DATASOURCE_URL`
+  - `SPRING_DATASOURCE_USERNAME`
+  - `SPRING_DATASOURCE_PASSWORD`
+  
+  Ensure proper SSL/TLS configuration for production deployments.
+</Warning>
+
+Production base URLs will typically follow this pattern:
+```
+https://api.korofood.com
+```
+
+With service-specific routing:
+```
+https://api.korofood.com/userService/{endpoint}
+https://api.korofood.com/orderService/{endpoint}
+```
+
+## Service Health Checks
+
+Each microservice exposes health check endpoints (if Spring Actuator is enabled):
+
+```bash
+curl http://localhost:8081/actuator/health
+curl http://localhost:8082/actuator/health
+# ... and so on for each service
+```
+
+## Cross-Origin Resource Sharing (CORS)
+
+<Note>
+  If you're accessing the API from a web browser, ensure that CORS is properly configured in the API Gateway and individual services to allow requests from your frontend domain.
+</Note>
+
+## Best Practices
+
+1. **Use the API Gateway**: Always route requests through the API Gateway (port 8098) in production
+2. **Service Discovery**: Let Eureka handle service discovery; avoid hardcoding service URLs
+3. **Environment Variables**: Use environment variables for configuration in production
+4. **Health Monitoring**: Regularly check service health endpoints
+5. **Load Balancing**: The API Gateway provides automatic load balancing across service instances
+
+## Next Steps
+
+- Learn about [Error Handling](/api-reference/error-handling)
+- Explore [Authentication](/api-reference/introduction#authentication)
+- Review individual service endpoint documentation

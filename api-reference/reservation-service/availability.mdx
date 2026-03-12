@@ -1,0 +1,242 @@
+---
+title: 'Availability'
+description: 'Check table availability and time slots'
+---
+
+## Get Available Slots
+
+<api-endpoint method="GET" endpoint="/reserva/slots-disponibles" />
+
+Get available time slots for a table within a date range.
+
+### Query Parameters
+
+<ParamField query="mesaId" type="integer" required>
+  Table ID to check availability for
+</ParamField>
+
+<ParamField query="desde" type="string" required>
+  Start date and time in ISO 8601 format
+</ParamField>
+
+<ParamField query="hasta" type="string" required>
+  End date and time in ISO 8601 format
+</ParamField>
+
+<ParamField query="eventoId" type="integer">
+  Event ID to filter slots for a specific event
+</ParamField>
+
+### Response
+
+<ResponseField name="valor" type="boolean">
+  Success indicator
+</ResponseField>
+
+<ResponseField name="mensaje" type="string">
+  Response message
+</ResponseField>
+
+<ResponseField name="data" type="array">
+  Array of available time slots in ISO 8601 format
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl "https://api.korofood.com/reserva/slots-disponibles?mesaId=5&desde=2026-03-15T18:00:00&hasta=2026-03-15T22:00:00"
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "valor": true,
+  "mensaje": "Slots disponibles obtenidos",
+  "data": [
+    "2026-03-15T18:00:00",
+    "2026-03-15T18:30:00",
+    "2026-03-15T19:00:00",
+    "2026-03-15T19:30:00",
+    "2026-03-15T20:00:00",
+    "2026-03-15T20:30:00",
+    "2026-03-15T21:00:00",
+    "2026-03-15T21:30:00"
+  ]
+}
+```
+</ResponseExample>
+
+## Send Verification Code
+
+<api-endpoint method="POST" endpoint="/verificacion/enviar-codigo" />
+
+Send a verification code via SMS or email to confirm reservation attendance.
+
+### Request Body
+
+<ParamField body="reservaId" type="integer" required>
+  Reservation ID to send verification code for
+</ParamField>
+
+<ParamField body="tipoEnvio" type="string" required>
+  Delivery method: "SMS" or "EMAIL"
+</ParamField>
+
+### Response
+
+<ResponseField name="valor" type="boolean">
+  Success indicator
+</ResponseField>
+
+<ResponseField name="mensaje" type="string">
+  Response message
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Verification code response details
+  <ResponseField name="codigoEnviado" type="boolean">
+    Whether code was successfully sent
+  </ResponseField>
+  <ResponseField name="destino" type="string">
+    Destination (email or phone number, partially masked)
+  </ResponseField>
+  <ResponseField name="tipoEnvio" type="string">
+    Delivery method used
+  </ResponseField>
+  <ResponseField name="expiracion" type="string">
+    Code expiration time
+  </ResponseField>
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X POST https://api.korofood.com/verificacion/enviar-codigo \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reservaId": 456,
+    "tipoEnvio": "SMS"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "valor": true,
+  "mensaje": "Código enviado",
+  "data": {
+    "codigoEnviado": true,
+    "destino": "***-***-1234",
+    "tipoEnvio": "SMS",
+    "expiracion": "2026-03-15T19:15:00"
+  }
+}
+```
+</ResponseExample>
+
+## Verify Code
+
+<api-endpoint method="POST" endpoint="/verificacion/verificar" />
+
+Verify the code and mark reservation as attended.
+
+### Request Body
+
+<ParamField body="reservaId" type="integer" required>
+  Reservation ID to verify
+</ParamField>
+
+<ParamField body="codigo" type="string" required>
+  Verification code received
+</ParamField>
+
+### Response
+
+<ResponseField name="valor" type="boolean">
+  Success indicator
+</ResponseField>
+
+<ResponseField name="mensaje" type="string">
+  Response message
+</ResponseField>
+
+<ResponseField name="data" type="string">
+  Confirmation message
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X POST https://api.korofood.com/verificacion/verificar \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reservaId": 456,
+    "codigo": "123456"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "valor": true,
+  "mensaje": "Código verificado exitosamente",
+  "data": "Reserva marcada como ASISTIDA"
+}
+```
+</ResponseExample>
+
+## Resend Verification Code
+
+<api-endpoint method="POST" endpoint="/verificacion/reenviar-codigo" />
+
+Resend verification code to the customer.
+
+### Request Body
+
+<ParamField body="reservaId" type="integer" required>
+  Reservation ID to resend code for
+</ParamField>
+
+<ParamField body="tipoEnvio" type="string" required>
+  Delivery method: "SMS" or "EMAIL"
+</ParamField>
+
+### Response
+
+<ResponseField name="valor" type="boolean">
+  Success indicator
+</ResponseField>
+
+<ResponseField name="mensaje" type="string">
+  Response message
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Verification code response details
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X POST https://api.korofood.com/verificacion/reenviar-codigo \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reservaId": 456,
+    "tipoEnvio": "EMAIL"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "valor": true,
+  "mensaje": "Código reenviado",
+  "data": {
+    "codigoEnviado": true,
+    "destino": "j***@example.com",
+    "tipoEnvio": "EMAIL",
+    "expiracion": "2026-03-15T19:20:00"
+  }
+}
+```
+</ResponseExample>

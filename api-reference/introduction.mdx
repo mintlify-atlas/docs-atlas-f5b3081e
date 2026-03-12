@@ -1,33 +1,169 @@
 ---
-title: 'Introduction'
-description: 'Example section for showcasing API endpoints'
+title: 'API Introduction'
+description: 'Overview of the KoroFood Restaurant Management System API'
 ---
 
-<Note>
-  If you're not looking to build API reference documentation, you can delete
-  this section by removing the api-reference folder.
-</Note>
+## Welcome to KoroFood API
 
-## Welcome
-
-There are two ways to build API documentation: [OpenAPI](https://mintlify.com/docs/api-playground/openapi/setup) and [MDX components](https://mintlify.com/docs/api-playground/mdx/configuration). For the starter kit, we are using the following OpenAPI specification.
-
-<Card
-  title="Plant Store Endpoints"
-  icon="leaf"
-  href="https://github.com/mintlify/starter/blob/main/api-reference/openapi.json"
->
-  View the OpenAPI specification file
-</Card>
+The KoroFood Restaurant Management System provides a comprehensive RESTful API built on a microservices architecture. This API enables you to manage all aspects of restaurant operations including users, menus, orders, reservations, payments, events, tables, and customer ratings.
 
 ## Authentication
 
-All API endpoints are authenticated using Bearer tokens and picked up from the specification file.
+Most API endpoints require authentication using JWT (JSON Web Tokens). To access protected endpoints:
+
+1. **Register or Login**: Use the `/auth/register` or `/auth/login` endpoints to create an account or authenticate
+2. **Obtain JWT Token**: Upon successful authentication, you'll receive a JWT token
+3. **Include Token**: Send the token in the `Authorization` header for subsequent requests:
+
+```bash
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+<Note>
+  Some endpoints also require the `X-Username` header to identify the authenticated user.
+</Note>
+
+## Available Services
+
+The KoroFood API is organized into the following microservices:
+
+### User Service (Port 8081)
+Manages user authentication, registration, profiles, and social login (GitHub/Google).
+- User registration and authentication
+- Social authentication (GitHub, Google)
+- User profile management
+- District and location data
+- Real-time chat and notifications
+
+### Table Service (Port 8082)
+Handles restaurant table management and availability.
+- Table creation and configuration
+- Table availability checking
+- Table status management
+
+### Reservation Service (Port 8083)
+Manages customer reservations and booking slots.
+- Reservation creation and cancellation
+- Available time slot queries
+- Reservation verification via SMS/Email
+- Reservation reports
+
+### Qualification Service (Port 8084)
+Handles customer ratings and reviews.
+- Rating submission
+- Review management
+- Rating statistics
+
+### Payment Service (Port 8085)
+Processes payments and payment confirmations.
+- Payment creation with QR code generation
+- Payment confirmation
+- Payment status tracking
+- Payment capture upload and validation
+- Income reports
+
+### Order Service (Port 8086)
+Manages customer orders and order details.
+- Order creation and tracking
+- Order item management
+- Order status updates
+- Sales reports and analytics
+
+### Menu Service (Port 8087)
+Handles menu items, dishes, and categories.
+- Dish management
+- Menu categories and tags
+- Menu PDF generation
+- Dish availability
+
+### Event Service (Port 8088)
+Manages special events and themed occasions.
+- Event creation and management
+- Event themes
+- Event-table associations
+- Event reports
+
+## Quick Start
+
+Here's a quick example to get you started with the KoroFood API:
+
+<CodeGroup>
+```bash Login
+curl -X POST http://localhost:8098/userService/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "correo": "user@example.com",
+    "clave": "password123"
+  }'
+```
+
+```bash Get User Profile
+curl -X GET http://localhost:8098/userService/auth/me \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "X-Username: user@example.com"
+```
+
+```bash List Active Events
+curl -X GET http://localhost:8098/eventService/eventos/activos \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```bash Create Order
+curl -X POST http://localhost:8098/orderService/pedido \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "mesaId": 1,
+    "usuarioId": 5,
+    "observaciones": "Sin cebolla"
+  }'
+```
+</CodeGroup>
+
+## Standard Response Format
+
+Most endpoints return responses using the `ResultadoResponse` pattern:
 
 ```json
-"security": [
-  {
-    "bearerAuth": []
+{
+  "valor": true,
+  "mensaje": "Operation completed successfully",
+  "data": {
+    // Response data object
   }
-]
+}
 ```
+
+- `valor`: Boolean indicating success (true) or failure (false)
+- `mensaje`: Human-readable message describing the result
+- `data`: The actual response data (may be null for some operations)
+
+<Warning>
+  Always check the `valor` field to determine if the operation was successful.
+</Warning>
+
+## API Gateway
+
+All services are accessible through the API Gateway running on port **8098**. The gateway handles routing, load balancing, and service discovery via Eureka.
+
+**Recommended**: Use the API Gateway endpoint for all API calls:
+```
+http://localhost:8098/{serviceName}/{endpoint}
+```
+
+## Rate Limiting & Best Practices
+
+<Note>
+  Follow these best practices when integrating with the KoroFood API:
+  - Always include proper error handling for network failures
+  - Cache authentication tokens and reuse them until expiration
+  - Use appropriate HTTP methods (GET, POST, PUT, PATCH, DELETE)
+  - Include the `Content-Type: application/json` header for POST/PUT requests
+  - Handle multipart/form-data appropriately for file uploads
+</Note>
+
+## Next Steps
+
+- Learn about [Base URLs](/api-reference/base-url) for different environments
+- Understand [Error Handling](/api-reference/error-handling) patterns
+- Explore individual service endpoints in the API Reference section

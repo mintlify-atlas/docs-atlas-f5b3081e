@@ -1,0 +1,155 @@
+---
+title: 'Reviews'
+description: 'View and manage customer reviews'
+---
+
+## List All Reviews
+
+<api-endpoint method="GET" endpoint="/calificacion" />
+
+Retrieve all reviews and ratings in the system.
+
+### Response
+
+<ResponseField name="valor" type="boolean">
+  Success indicator
+</ResponseField>
+
+<ResponseField name="mensaje" type="string">
+  Response message
+</ResponseField>
+
+<ResponseField name="data" type="array">
+  Array of review objects
+  <ResponseField name="idResena" type="integer">
+    Review ID
+  </ResponseField>
+  <ResponseField name="idUsuario" type="integer">
+    User ID who submitted the review
+  </ResponseField>
+  <ResponseField name="nombreUsuarioCompleto" type="string">
+    Full name of the user
+  </ResponseField>
+  <ResponseField name="imagenUsuario" type="string">
+    User profile image URL
+  </ResponseField>
+  <ResponseField name="idEntidad" type="integer">
+    ID of the rated entity
+  </ResponseField>
+  <ResponseField name="nombreEntidad" type="string">
+    Name of the rated entity
+  </ResponseField>
+  <ResponseField name="imagenEntidad" type="string">
+    Entity image URL
+  </ResponseField>
+  <ResponseField name="calificacion" type="integer">
+    Rating score (1-5)
+  </ResponseField>
+  <ResponseField name="comentario" type="string">
+    Review comment
+  </ResponseField>
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl https://api.korofood.com/calificacion
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "valor": true,
+  "mensaje": "Reseñas obtenidas exitosamente",
+  "data": [
+    {
+      "idResena": 567,
+      "idUsuario": 123,
+      "nombreUsuarioCompleto": "Juan Pérez García",
+      "imagenUsuario": "https://example.com/users/123.jpg",
+      "idEntidad": 101,
+      "nombreEntidad": "Ceviche de Pescado",
+      "imagenEntidad": "https://example.com/dishes/101.jpg",
+      "calificacion": 5,
+      "comentario": "Excelente ceviche, muy fresco y bien servido"
+    },
+    {
+      "idResena": 568,
+      "idUsuario": 124,
+      "nombreUsuarioCompleto": "María López Torres",
+      "imagenUsuario": "https://example.com/users/124.jpg",
+      "idEntidad": 102,
+      "nombreEntidad": "Lomo Saltado",
+      "imagenEntidad": "https://example.com/dishes/102.jpg",
+      "calificacion": 4,
+      "comentario": "Muy bueno, pero un poco salado"
+    }
+  ]
+}
+```
+</ResponseExample>
+
+## Get Reviews by User
+
+<api-endpoint method="GET" endpoint="/calificacion/usuario/{id}" />
+
+Retrieve all reviews submitted by a specific user.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  User ID
+</ParamField>
+
+### Response
+
+<ResponseField name="valor" type="boolean">
+  Success indicator
+</ResponseField>
+
+<ResponseField name="mensaje" type="string">
+  Response message
+</ResponseField>
+
+<ResponseField name="data" type="array">
+  Array of review objects submitted by the user
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl https://api.korofood.com/calificacion/usuario/123
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "valor": true,
+  "mensaje": "Reseñas del usuario obtenidas exitosamente",
+  "data": [
+    {
+      "idResena": 567,
+      "idUsuario": 123,
+      "nombreUsuarioCompleto": "Juan Pérez García",
+      "imagenUsuario": "https://example.com/users/123.jpg",
+      "idEntidad": 101,
+      "nombreEntidad": "Ceviche de Pescado",
+      "imagenEntidad": "https://example.com/dishes/101.jpg",
+      "calificacion": 5,
+      "comentario": "Excelente ceviche, muy fresco y bien servido"
+    },
+    {
+      "idResena": 569,
+      "idUsuario": 123,
+      "nombreUsuarioCompleto": "Juan Pérez García",
+      "imagenUsuario": "https://example.com/users/123.jpg",
+      "idEntidad": 456,
+      "nombreEntidad": "Reserva Mesa 5",
+      "imagenEntidad": null,
+      "calificacion": 5,
+      "comentario": "Excelente atención, muy puntuales"
+    }
+  ]
+}
+```
+</ResponseExample>

@@ -1,0 +1,127 @@
+---
+title: Introduction
+description: A microservices-based REST API for managing restaurant reservations, events, tables, orders, and payments with real-time order handling and multimedia integration.
+---
+
+<img
+  className="block dark:hidden"
+  src="https://media.brand.dev/6ab21bc4-ff66-4d45-8219-6a8c6e748847.png"
+  alt="KoroFood's Logo"
+/>
+<img
+  className="hidden dark:block"
+  src="https://media.brand.dev/6ab21bc4-ff66-4d45-8219-6a8c6e748847.png"
+  alt="KoroFood's Logo"
+/>
+
+# Welcome to KoroFood's Restaurant Management System
+
+KoroFood's is a comprehensive event and restaurant management system built with a modern microservices architecture. It provides a complete solution for managing reservations, events, tables, orders, and payments with real-time capabilities and multimedia integration.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Microservices Architecture" icon="cubes" iconType="duotone">
+    Built with Spring Boot microservices for scalability and resilience
+  </Card>
+  <Card title="Real-time Order Management" icon="bolt" iconType="duotone">
+    WebSocket-powered real-time communication between waiters and customers
+  </Card>
+  <Card title="QR Code Validation" icon="qrcode" iconType="duotone">
+    Secure reservation validation using QR codes
+  </Card>
+  <Card title="AI Chatbot" icon="robot" iconType="duotone">
+    Automated customer support powered by AI
+  </Card>
+  <Card title="OAuth 2.0 & JWT" icon="shield-halved" iconType="duotone">
+    Secure authentication with social login support (GitHub, Google)
+  </Card>
+  <Card title="Multi-Database Support" icon="database" iconType="duotone">
+    PostgreSQL, MongoDB, and Redis for optimized data storage
+  </Card>
+  <Card title="Asynchronous Messaging" icon="message-dots" iconType="duotone">
+    Event-driven architecture with RabbitMQ
+  </Card>
+  <Card title="Payment Processing" icon="credit-card" iconType="duotone">
+    Integrated payment handling with receipt validation
+  </Card>
+</CardGroup>
+
+## Architecture Overview
+
+The system is built on a microservices architecture where each service is independent, making it resilient to change and highly scalable. Communication between services is handled via RabbitMQ for asynchronous messaging and WebSocket for real-time updates.
+
+### Core Services
+
+- **User Service** (Port 8081) - Authentication, user management, and AI chatbot
+- **Table Service** (Port 8082) - Table management and availability
+- **Reservation Service** (Port 8083) - Reservation booking and queries
+- **Qualification Service** (Port 8084) - Ratings and reviews
+- **Payment Service** (Port 8085) - Payment processing and validation
+- **Order Service** (Port 8086) - Order management and reporting
+- **Menu Service** (Port 8087) - Menu and dish management
+- **Event Service** (Port 8088) - Event scheduling and themes
+- **API Gateway** (Port 8098) - Single entry point for all requests
+- **Eureka Server** (Port 8761) - Service discovery and registration
+
+## Technology Stack
+
+### Backend
+- **Spring Boot 3.3.x** - Main framework for microservices
+- **Java 21** - Programming language
+- **RabbitMQ** - Asynchronous messaging
+- **PostgreSQL** - Primary relational database
+- **MongoDB** - Chat message storage
+- **Redis** - High-performance caching
+- **JWT & OAuth 2.0** - Authentication and authorization
+
+### Frontend
+- **Angular 17+** - User interface framework
+- **TypeScript** - Type-safe development
+- **WebSockets** - Real-time communication
+
+### Infrastructure
+- **Docker** - Containerization
+- **Kubernetes** - Container orchestration
+- **Cloudinary** - Image management
+- **Eureka** - Service discovery
+- **Spring Cloud Gateway** - API Gateway
+
+## Quick Links
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Get up and running in minutes
+  </Card>
+  <Card title="Architecture" icon="diagram-project" href="/architecture">
+    Learn about the system architecture
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/introduction">
+    Explore the complete API documentation
+  </Card>
+  <Card title="Deployment" icon="server" href="/deployment/docker">
+    Deploy with Docker and Kubernetes
+  </Card>
+</CardGroup>
+
+## What You Can Build
+
+KoroFood's provides everything you need to run a modern restaurant:
+
+- 📅 **24/7 Digital Reservations** - Accept bookings for regular and special events
+- 🔒 **Secure Check-ins** - Validate reservations with QR codes
+- 🛎️ **Real-time Orders** - Manage orders between staff and customers instantly
+- 🤖 **Automated Support** - Handle customer inquiries with AI
+- ⭐ **Rating System** - Collect feedback on dishes and events
+- 📊 **Admin Dashboard** - Full CRUD operations and management
+- 📈 **Real-time Analytics** - Monitor performance with live data visualization
+
+## Getting Started
+
+Ready to get started? Check out our [Quickstart Guide](/quickstart) to set up KoroFood's locally or explore the [API Reference](/api-reference/introduction) to integrate with your application.
+
+<CardGroup cols={1}>
+  <Card title="View on GitHub" icon="github" href="https://github.com/CoDeVeck/KoroFood-s">
+    Explore the source code and contribute to the project
+  </Card>
+</CardGroup>

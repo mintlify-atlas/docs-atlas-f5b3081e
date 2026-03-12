@@ -1,0 +1,262 @@
+---
+title: 'Reports'
+description: 'Generate sales and performance reports for the restaurant'
+---
+
+## Sales by Table Report
+
+<api method="GET" endpoint="/pedido/reporte/ventas-por-mesa">
+  Generate a sales report grouped by table with optional date range and table filters.
+</api>
+
+### Query Parameters
+
+<ParamField query="fechaInicio" type="LocalDate" optional>
+  Start date for the report (ISO 8601 format: YYYY-MM-DD)
+</ParamField>
+
+<ParamField query="fechaFin" type="LocalDate" optional>
+  End date for the report (ISO 8601 format: YYYY-MM-DD)
+</ParamField>
+
+<ParamField query="idMesa" type="Integer" optional>
+  Filter by specific table ID
+</ParamField>
+
+### Response
+
+<ResponseField name="valor" type="boolean">
+  Indicates if the operation was successful
+</ResponseField>
+
+<ResponseField name="data" type="List<VentasPorFechaMesaDTO>">
+  List of sales data grouped by table
+  
+  <ResponseField name="idMesa" type="Integer">
+    Table ID
+  </ResponseField>
+  
+  <ResponseField name="numeroMesa" type="String">
+    Table number or name
+  </ResponseField>
+  
+  <ResponseField name="fecha" type="LocalDate">
+    Sale date
+  </ResponseField>
+  
+  <ResponseField name="totalVentas" type="Double">
+    Total sales amount for the table
+  </ResponseField>
+  
+  <ResponseField name="cantidadPedidos" type="Integer">
+    Number of orders for the table
+  </ResponseField>
+  
+  <ResponseField name="promedioVenta" type="Double">
+    Average sale amount per order
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="mensaje" type="String">
+  Response message
+</ResponseField>
+
+### Example Request - All Tables
+
+```bash
+curl -X GET "https://api.korofood.com/pedido/reporte/ventas-por-mesa?fechaInicio=2026-03-01&fechaFin=2026-03-12" \
+  -H "Content-Type: application/json"
+```
+
+### Example Request - Specific Table
+
+```bash
+curl -X GET "https://api.korofood.com/pedido/reporte/ventas-por-mesa?fechaInicio=2026-03-01&fechaFin=2026-03-12&idMesa=5" \
+  -H "Content-Type: application/json"
+```
+
+### Example Request - No Date Filter
+
+```bash
+curl -X GET "https://api.korofood.com/pedido/reporte/ventas-por-mesa" \
+  -H "Content-Type: application/json"
+```
+
+### Example Response
+
+```json
+{
+  "valor": true,
+  "data": [
+    {
+      "idMesa": 5,
+      "numeroMesa": "Mesa 5",
+      "fecha": "2026-03-12",
+      "totalVentas": 450.75,
+      "cantidadPedidos": 8,
+      "promedioVenta": 56.34
+    },
+    {
+      "idMesa": 8,
+      "numeroMesa": "Mesa 8",
+      "fecha": "2026-03-12",
+      "totalVentas": 325.50,
+      "cantidadPedidos": 5,
+      "promedioVenta": 65.10
+    },
+    {
+      "idMesa": 5,
+      "numeroMesa": "Mesa 5",
+      "fecha": "2026-03-11",
+      "totalVentas": 380.25,
+      "cantidadPedidos": 6,
+      "promedioVenta": 63.38
+    }
+  ],
+  "mensaje": "Reporte generado exitosamente"
+}
+```
+
+### Use Cases
+
+- **Track table performance**: Identify which tables generate the most revenue
+- **Optimize seating**: Analyze table utilization patterns
+- **Date range analysis**: Compare sales across different time periods
+- **Single table analysis**: Deep dive into specific table performance
+
+---
+
+## Best Selling Dishes Report
+
+<api method="GET" endpoint="/pedido/reporte/platos-mas-vendidos">
+  Generate a report of the most popular dishes with optional date range filter.
+</api>
+
+### Query Parameters
+
+<ParamField query="fechaInicio" type="LocalDate" optional>
+  Start date for the report (ISO 8601 format: YYYY-MM-DD)
+</ParamField>
+
+<ParamField query="fechaFin" type="LocalDate" optional>
+  End date for the report (ISO 8601 format: YYYY-MM-DD)
+</ParamField>
+
+### Response
+
+<ResponseField name="valor" type="boolean">
+  Indicates if the operation was successful
+</ResponseField>
+
+<ResponseField name="data" type="List<PlatosMasVendidosDTO>">
+  List of dishes sorted by popularity (descending)
+  
+  <ResponseField name="idPlato" type="Integer">
+    Dish ID
+  </ResponseField>
+  
+  <ResponseField name="nombrePlato" type="String">
+    Dish name
+  </ResponseField>
+  
+  <ResponseField name="categoria" type="String">
+    Dish category
+  </ResponseField>
+  
+  <ResponseField name="cantidadVendida" type="Integer">
+    Total quantity sold
+  </ResponseField>
+  
+  <ResponseField name="totalIngresos" type="Double">
+    Total revenue generated from this dish
+  </ResponseField>
+  
+  <ResponseField name="precioPromedio" type="Double">
+    Average selling price
+  </ResponseField>
+  
+  <ResponseField name="porcentajeVentas" type="Double">
+    Percentage of total sales
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="mensaje" type="String">
+  Response message
+</ResponseField>
+
+### Example Request - Date Range
+
+```bash
+curl -X GET "https://api.korofood.com/pedido/reporte/platos-mas-vendidos?fechaInicio=2026-03-01&fechaFin=2026-03-12" \
+  -H "Content-Type: application/json"
+```
+
+### Example Request - All Time
+
+```bash
+curl -X GET "https://api.korofood.com/pedido/reporte/platos-mas-vendidos" \
+  -H "Content-Type: application/json"
+```
+
+### Example Response
+
+```json
+{
+  "valor": true,
+  "data": [
+    {
+      "idPlato": 12,
+      "nombrePlato": "Ceviche de Pescado",
+      "categoria": "Entradas",
+      "cantidadVendida": 145,
+      "totalIngresos": 2318.55,
+      "precioPromedio": 15.99,
+      "porcentajeVentas": 18.5
+    },
+    {
+      "idPlato": 25,
+      "nombrePlato": "Lomo Saltado",
+      "categoria": "Platos Principales",
+      "cantidadVendida": 132,
+      "totalIngresos": 2442.00,
+      "precioPromedio": 18.50,
+      "porcentajeVentas": 19.5
+    },
+    {
+      "idPlato": 8,
+      "nombrePlato": "Causa Limeña",
+      "categoria": "Entradas",
+      "cantidadVendida": 98,
+      "totalIngresos": 1176.00,
+      "precioPromedio": 12.00,
+      "porcentajeVentas": 9.4
+    },
+    {
+      "idPlato": 33,
+      "nombrePlato": "Arroz con Pollo",
+      "categoria": "Platos Principales",
+      "cantidadVendida": 87,
+      "totalIngresos": 1305.00,
+      "precioPromedio": 15.00,
+      "porcentajeVentas": 10.4
+    }
+  ],
+  "mensaje": "Reporte generado exitosamente"
+}
+```
+
+### Use Cases
+
+- **Menu optimization**: Identify top performers to feature prominently
+- **Inventory planning**: Stock ingredients based on dish popularity
+- **Marketing decisions**: Promote best-selling items
+- **Revenue analysis**: Understand which dishes drive the most income
+- **Seasonal trends**: Compare dish performance across different periods
+- **Menu engineering**: Identify dishes to keep, promote, or remove
+
+### Tips
+
+- Use date filters to compare performance across different periods (weekly, monthly, seasonal)
+- Combine with sales by table report to understand location-based preferences
+- Monitor `porcentajeVentas` to understand each dish's contribution to overall revenue
+- Track `cantidadVendida` vs `totalIngresos` to identify high-volume vs high-value items

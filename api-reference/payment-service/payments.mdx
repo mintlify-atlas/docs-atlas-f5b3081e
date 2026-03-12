@@ -1,0 +1,368 @@
+---
+title: 'Payments'
+description: 'Process and manage payments'
+---
+
+## Create Payment
+
+<api-endpoint method="POST" endpoint="/pago" />
+
+Create a new payment and generate QR code data for Yape/Plin.
+
+### Request Body
+
+<ParamField body="idReserva" type="integer">
+  Reservation ID (required if payment is for a reservation, null for orders)
+</ParamField>
+
+<ParamField body="idPedido" type="integer">
+  Order ID (required if payment is for an order, null for reservations)
+</ParamField>
+
+<ParamField body="idUsuario" type="integer" required>
+  User ID making the payment
+</ParamField>
+
+<ParamField body="tipoPago" type="string" required>
+  Payment type: "DR" (Derecho de Reserva) or "PP" (Pago de Pedido)
+</ParamField>
+
+<ParamField body="monto" type="number" required>
+  Payment amount (must be positive)
+</ParamField>
+
+<ParamField body="metodoPago" type="string" required>
+  Payment method: "YAPE", "PLIN", "EFECTIVO", or "TARJETA"
+</ParamField>
+
+<ParamField body="observaciones" type="string">
+  Additional observations or notes
+</ParamField>
+
+### Response
+
+<ResponseField name="idPago" type="integer">
+  Payment ID
+</ResponseField>
+
+<ResponseField name="referenciaPago" type="string">
+  Payment reference code
+</ResponseField>
+
+<ResponseField name="monto" type="number">
+  Payment amount
+</ResponseField>
+
+<ResponseField name="metodoPago" type="string">
+  Payment method
+</ResponseField>
+
+<ResponseField name="numeroDestino" type="string">
+  Destination phone number for Yape/Plin
+</ResponseField>
+
+<ResponseField name="nombreDestino" type="string">
+  Destination account name
+</ResponseField>
+
+<ResponseField name="concepto" type="string">
+  Payment concept/description
+</ResponseField>
+
+<ResponseField name="qrData" type="string">
+  QR code data for frontend generation
+</ResponseField>
+
+<ResponseField name="fechaExpiracion" type="string">
+  Payment expiration date and time
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X POST https://api.korofood.com/pago \
+  -H "Content-Type: application/json" \
+  -d '{
+    "idReserva": 456,
+    "idUsuario": 123,
+    "tipoPago": "DR",
+    "monto": 50.00,
+    "metodoPago": "YAPE",
+    "observaciones": "Reserva para 4 personas"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "idPago": 789,
+  "referenciaPago": "PAY-20260312-789",
+  "monto": 50.00,
+  "metodoPago": "YAPE",
+  "numeroDestino": "987654321",
+  "nombreDestino": "KoroFood Restaurant",
+  "concepto": "Derecho de Reserva #456",
+  "qrData": "yape://pay?phone=987654321&amount=50.00&ref=PAY-20260312-789",
+  "fechaExpiracion": "2026-03-12T23:59:59"
+}
+```
+</ResponseExample>
+
+## Confirm Payment
+
+<api-endpoint method="POST" endpoint="/pago/confirmar" />
+
+Confirm a payment by entering the operation code.
+
+### Request Body
+
+<ParamField body="idPago" type="integer" required>
+  Payment ID to confirm
+</ParamField>
+
+<ParamField body="codigoOperacion" type="string" required>
+  Operation code from Yape/Plin/Bank
+</ParamField>
+
+### Response
+
+<ResponseField name="idPago" type="integer">
+  Payment ID
+</ResponseField>
+
+<ResponseField name="estado" type="string">
+  Payment status
+</ResponseField>
+
+<ResponseField name="estadoDescripcion" type="string">
+  Status description
+</ResponseField>
+
+<ResponseField name="codigoOperacion" type="string">
+  Confirmed operation code
+</ResponseField>
+
+<ResponseField name="fechaPago" type="string">
+  Payment confirmation timestamp
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X POST https://api.korofood.com/pago/confirmar \
+  -H "Content-Type: application/json" \
+  -d '{
+    "idPago": 789,
+    "codigoOperacion": "YP123456789"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "idPago": 789,
+  "idReserva": 456,
+  "idUsuario": 123,
+  "tipoPago": "DR",
+  "monto": 50.00,
+  "metodoPago": "YAPE",
+  "estado": "CONFIRMADO",
+  "estadoDescripcion": "Confirmado",
+  "codigoOperacion": "YP123456789",
+  "fechaPago": "2026-03-12T15:30:00",
+  "referenciaPago": "PAY-20260312-789"
+}
+```
+</ResponseExample>
+
+## Cancel Payment
+
+<api-endpoint method="PATCH" endpoint="/pago/{id}/anular" />
+
+Cancel/void a payment.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  Payment ID to cancel
+</ParamField>
+
+### Request Body
+
+<ParamField body="motivo" type="string">
+  Cancellation reason (defaults to "Anulación solicitada por el usuario")
+</ParamField>
+
+### Response
+
+<ResponseField name="idPago" type="integer">
+  Payment ID
+</ResponseField>
+
+<ResponseField name="estado" type="string">
+  Updated status (ANULADO)
+</ResponseField>
+
+<ResponseField name="motivoRechazo" type="string">
+  Cancellation reason
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X PATCH https://api.korofood.com/pago/789/anular \
+  -H "Content-Type: application/json" \
+  -d '{
+    "motivo": "Cliente solicitó cancelación"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "idPago": 789,
+  "estado": "ANULADO",
+  "estadoDescripcion": "Anulado",
+  "motivoRechazo": "Cliente solicitó cancelación"
+}
+```
+</ResponseExample>
+
+## List All Payments
+
+<api-endpoint method="GET" endpoint="/pago" />
+
+Retrieve all payments in the system.
+
+### Response
+
+<ResponseField name="data" type="array">
+  Array of payment objects
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl https://api.korofood.com/pago
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+[
+  {
+    "idPago": 789,
+    "idReserva": 456,
+    "idUsuario": 123,
+    "tipoPago": "DR",
+    "tipoPagoDescripcion": "Derecho de Reserva",
+    "monto": 50.00,
+    "metodoPago": "YAPE",
+    "metodoPagoDescripcion": "Yape",
+    "estado": "CONFIRMADO",
+    "estadoDescripcion": "Confirmado",
+    "codigoOperacion": "YP123456789",
+    "fechaPago": "2026-03-12T15:30:00",
+    "referenciaPago": "PAY-20260312-789"
+  }
+]
+```
+</ResponseExample>
+
+## Get Payment by ID
+
+<api-endpoint method="GET" endpoint="/pago/{id}" />
+
+Retrieve a specific payment by ID.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  Payment ID
+</ParamField>
+
+### Response
+
+<ResponseField name="idPago" type="integer">
+  Payment ID
+</ResponseField>
+
+<ResponseField name="monto" type="number">
+  Payment amount
+</ResponseField>
+
+<ResponseField name="estado" type="string">
+  Payment status
+</ResponseField>
+
+<ResponseField name="referenciaPago" type="string">
+  Payment reference
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl https://api.korofood.com/pago/789
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "idPago": 789,
+  "idReserva": 456,
+  "idUsuario": 123,
+  "tipoPago": "DR",
+  "tipoPagoDescripcion": "Derecho de Reserva",
+  "monto": 50.00,
+  "metodoPago": "YAPE",
+  "metodoPagoDescripcion": "Yape",
+  "estado": "CONFIRMADO",
+  "estadoDescripcion": "Confirmado",
+  "codigoOperacion": "YP123456789",
+  "fechaPago": "2026-03-12T15:30:00",
+  "referenciaPago": "PAY-20260312-789"
+}
+```
+</ResponseExample>
+
+## Get Payment by Reference
+
+<api-endpoint method="GET" endpoint="/pago/referencia/{referencia}" />
+
+Retrieve a payment by its reference code.
+
+### Path Parameters
+
+<ParamField path="referencia" type="string" required>
+  Payment reference code
+</ParamField>
+
+### Response
+
+<ResponseField name="idPago" type="integer">
+  Payment ID
+</ResponseField>
+
+<ResponseField name="referenciaPago" type="string">
+  Payment reference
+</ResponseField>
+
+<ResponseField name="estado" type="string">
+  Payment status
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl https://api.korofood.com/pago/referencia/PAY-20260312-789
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "idPago": 789,
+  "referenciaPago": "PAY-20260312-789",
+  "monto": 50.00,
+  "estado": "CONFIRMADO"
+}
+```
+</ResponseExample>

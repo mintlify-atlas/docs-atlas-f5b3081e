@@ -1,0 +1,36 @@
+---
+title: 'Menu'
+description: 'Access and download restaurant menu'
+---
+
+## Download Menu PDF
+
+<api-endpoint method="GET" endpoint="/menu/pdf" />
+
+Generate and download the restaurant menu as a PDF file.
+
+### Response
+
+Returns a PDF file containing the complete restaurant menu with all active dishes.
+
+<ResponseField name="Content-Type" type="string">
+  application/pdf
+</ResponseField>
+
+<ResponseField name="Content-Disposition" type="string">
+  attachment; filename="KoroFood-Menu-{date}.pdf"
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl https://api.korofood.com/menu/pdf \
+  -o menu.pdf
+```
+</RequestExample>
+
+<ResponseExample>
+```text
+PDF file downloaded successfully.
+Filename: KoroFood-Menu-2026-03-12.pdf
+```
+</ResponseExample>

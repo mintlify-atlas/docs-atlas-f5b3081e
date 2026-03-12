@@ -1,0 +1,261 @@
+---
+title: 'Event Tables'
+description: 'Manage table assignments for events in the KoroFood system'
+---
+
+## Assign Table to Event
+
+<api-endpoint method="POST" endpoint="/evento-mesas" />
+
+Assigns a table to an event for a specific time period.
+
+### Request Body
+
+<ParamField body="idEvento" type="integer" required>
+  Event ID to assign the table to
+</ParamField>
+
+<ParamField body="idMesa" type="integer" required>
+  Table ID to be assigned
+</ParamField>
+
+<ParamField body="fechaDesde" type="datetime" required>
+  Start date and time for the table assignment (ISO 8601 format)
+</ParamField>
+
+<ParamField body="fechaHasta" type="datetime" required>
+  End date and time for the table assignment (ISO 8601 format)
+</ParamField>
+
+### Response
+
+<ResponseField name="idEventoMesa" type="integer">
+  Unique identifier for the event-table assignment
+</ResponseField>
+
+<ResponseField name="evento" type="object">
+  Complete event information
+  <ResponseField name="idEvento" type="integer">
+    Event ID
+  </ResponseField>
+  <ResponseField name="nombre" type="string">
+    Event name
+  </ResponseField>
+  <ResponseField name="descripcion" type="string">
+    Event description
+  </ResponseField>
+  <ResponseField name="tematica" type="object">
+    Theme information
+  </ResponseField>
+  <ResponseField name="fechaInicio" type="datetime">
+    Event start date
+  </ResponseField>
+  <ResponseField name="fechaFin" type="datetime">
+    Event end date
+  </ResponseField>
+  <ResponseField name="costo" type="decimal">
+    Event cost
+  </ResponseField>
+  <ResponseField name="imagen" type="string">
+    Event image URL
+  </ResponseField>
+  <ResponseField name="activo" type="boolean">
+    Event active status
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="idMesa" type="integer">
+  Table ID assigned to the event
+</ResponseField>
+
+<ResponseField name="fechaDesde" type="datetime">
+  Assignment start date and time
+</ResponseField>
+
+<ResponseField name="fechaHasta" type="datetime">
+  Assignment end date and time
+</ResponseField>
+
+<ResponseField name="activo" type="boolean">
+  Whether the assignment is active
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -X POST https://api.korofood.com/evento-mesas \
+  -H "Content-Type: application/json" \
+  -d '{
+    "idEvento": 5,
+    "idMesa": 12,
+    "fechaDesde": "2026-12-31T20:00:00",
+    "fechaHasta": "2027-01-01T02:00:00"
+  }'
+```
+
+---
+
+## List All Event-Table Assignments
+
+<api-endpoint method="GET" endpoint="/evento-mesas" />
+
+Retrieves a list of all event-table assignments in the system.
+
+### Response
+
+Returns an array of event-table assignment objects with the same structure as the Create response.
+
+### Example Request
+
+```bash
+curl -X GET https://api.korofood.com/evento-mesas
+```
+
+---
+
+## List Active Event-Table Assignments
+
+<api-endpoint method="GET" endpoint="/evento-mesas/activos" />
+
+Retrieves a list of all active event-table assignments.
+
+### Response
+
+Returns an array of active event-table assignment objects.
+
+### Example Request
+
+```bash
+curl -X GET https://api.korofood.com/evento-mesas/activos
+```
+
+---
+
+## List Assignments by Event
+
+<api-endpoint method="GET" endpoint="/evento-mesas/evento/{idEvento}" />
+
+Retrieves all table assignments for a specific event.
+
+### Path Parameters
+
+<ParamField path="idEvento" type="integer" required>
+  Event ID to filter assignments
+</ParamField>
+
+### Response
+
+Returns an array of event-table assignment objects for the specified event.
+
+### Example Request
+
+```bash
+curl -X GET https://api.korofood.com/evento-mesas/evento/5
+```
+
+---
+
+## List Assignments by Table
+
+<api-endpoint method="GET" endpoint="/evento-mesas/mesa/{idMesa}" />
+
+Retrieves all event assignments for a specific table.
+
+### Path Parameters
+
+<ParamField path="idMesa" type="integer" required>
+  Table ID to filter assignments
+</ParamField>
+
+### Response
+
+Returns an array of event-table assignment objects for the specified table.
+
+### Example Request
+
+```bash
+curl -X GET https://api.korofood.com/evento-mesas/mesa/12
+```
+
+---
+
+## Get Event-Table Assignment by ID
+
+<api-endpoint method="GET" endpoint="/evento-mesas/{id}" />
+
+Retrieves a specific event-table assignment by its ID.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  Event-table assignment ID
+</ParamField>
+
+### Response
+
+Returns the event-table assignment object with all details.
+
+### Example Request
+
+```bash
+curl -X GET https://api.korofood.com/evento-mesas/25
+```
+
+---
+
+## Update Event-Table Assignment
+
+<api-endpoint method="PUT" endpoint="/evento-mesas/{id}" />
+
+Updates an existing event-table assignment.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  Event-table assignment ID to update
+</ParamField>
+
+### Request Body
+
+Same parameters as Assign Table to Event.
+
+### Response
+
+Returns the updated event-table assignment object.
+
+### Example Request
+
+```bash
+curl -X PUT https://api.korofood.com/evento-mesas/25 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "idEvento": 5,
+    "idMesa": 12,
+    "fechaDesde": "2026-12-31T19:30:00",
+    "fechaHasta": "2027-01-01T03:00:00"
+  }'
+```
+
+---
+
+## Delete Event-Table Assignment
+
+<api-endpoint method="DELETE" endpoint="/evento-mesas/{id}" />
+
+Removes a table assignment from an event.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  Event-table assignment ID to delete
+</ParamField>
+
+### Response
+
+Returns 204 No Content on successful deletion.
+
+### Example Request
+
+```bash
+curl -X DELETE https://api.korofood.com/evento-mesas/25
+```

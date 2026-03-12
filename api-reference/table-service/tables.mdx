@@ -1,0 +1,237 @@
+---
+title: 'Tables'
+description: 'Manage restaurant tables'
+---
+
+## Create Table
+
+<api-endpoint method="POST" endpoint="/mesa" />
+
+Create a new table in the restaurant.
+
+### Request Body
+
+<ParamField body="numeroMesa" type="integer" required>
+  Table number (must be positive)
+</ParamField>
+
+<ParamField body="capacidad" type="integer" required>
+  Table capacity (1-20 persons)
+</ParamField>
+
+<ParamField body="zona" type="string" required>
+  Table zone: "Z1" (Zone 1) or "Z2" (Zone 2)
+</ParamField>
+
+<ParamField body="estado" type="string" required>
+  Table status: "LIBRE" (Free), "ASIGNADA" (Assigned), or "OCUPADA" (Occupied)
+</ParamField>
+
+### Response
+
+<ResponseField name="idMesa" type="integer">
+  Table ID
+</ResponseField>
+
+<ResponseField name="numeroMesa" type="integer">
+  Table number
+</ResponseField>
+
+<ResponseField name="capacidad" type="integer">
+  Table capacity
+</ResponseField>
+
+<ResponseField name="zona" type="string">
+  Zone code
+</ResponseField>
+
+<ResponseField name="zonaDescripcion" type="string">
+  Zone description (Zona 1 or Zona 2)
+</ResponseField>
+
+<ResponseField name="estado" type="string">
+  Status code
+</ResponseField>
+
+<ResponseField name="estadoDescripcion" type="string">
+  Status description (Libre, Asignada, Ocupada)
+</ResponseField>
+
+<ResponseField name="activo" type="boolean">
+  Whether the table is active
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X POST https://api.korofood.com/mesa \
+  -H "Content-Type: application/json" \
+  -d '{
+    "numeroMesa": 10,
+    "capacidad": 4,
+    "zona": "Z1",
+    "estado": "LIBRE"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "idMesa": 25,
+  "numeroMesa": 10,
+  "capacidad": 4,
+  "zona": "Z1",
+  "zonaDescripcion": "Zona 1",
+  "estado": "LIBRE",
+  "estadoDescripcion": "Libre",
+  "activo": true
+}
+```
+</ResponseExample>
+
+## List All Tables
+
+<api-endpoint method="GET" endpoint="/mesa" />
+
+Retrieve all tables in the restaurant.
+
+### Response
+
+<ResponseField name="data" type="array">
+  Array of table objects
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl https://api.korofood.com/mesa
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+[
+  {
+    "idMesa": 1,
+    "numeroMesa": 1,
+    "capacidad": 4,
+    "zona": "Z1",
+    "zonaDescripcion": "Zona 1",
+    "estado": "LIBRE",
+    "estadoDescripcion": "Libre",
+    "activo": true
+  },
+  {
+    "idMesa": 2,
+    "numeroMesa": 2,
+    "capacidad": 6,
+    "zona": "Z2",
+    "zonaDescripcion": "Zona 2",
+    "estado": "OCUPADA",
+    "estadoDescripcion": "Ocupada",
+    "activo": true
+  }
+]
+```
+</ResponseExample>
+
+## List Active Tables
+
+<api-endpoint method="GET" endpoint="/mesa/activas" />
+
+Retrieve all active tables.
+
+### Response
+
+<ResponseField name="data" type="array">
+  Array of active table objects
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl https://api.korofood.com/mesa/activas
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+[
+  {
+    "idMesa": 1,
+    "numeroMesa": 1,
+    "capacidad": 4,
+    "zona": "Z1",
+    "zonaDescripcion": "Zona 1",
+    "estado": "LIBRE",
+    "estadoDescripcion": "Libre",
+    "activo": true
+  }
+]
+```
+</ResponseExample>
+
+## Get Table by ID
+
+<api-endpoint method="GET" endpoint="/mesa/{id}" />
+
+Retrieve a specific table by ID.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  Table ID
+</ParamField>
+
+### Response
+
+<ResponseField name="idMesa" type="integer">
+  Table ID
+</ResponseField>
+
+<ResponseField name="numeroMesa" type="integer">
+  Table number
+</ResponseField>
+
+<ResponseField name="capacidad" type="integer">
+  Table capacity
+</ResponseField>
+
+<ResponseField name="zona" type="string">
+  Zone code
+</ResponseField>
+
+<ResponseField name="zonaDescripcion" type="string">
+  Zone description
+</ResponseField>
+
+<ResponseField name="estado" type="string">
+  Status code
+</ResponseField>
+
+<ResponseField name="estadoDescripcion" type="string">
+  Status description
+</ResponseField>
+
+<ResponseField name="activo" type="boolean">
+  Whether the table is active
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl https://api.korofood.com/mesa/1
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "idMesa": 1,
+  "numeroMesa": 1,
+  "capacidad": 4,
+  "zona": "Z1",
+  "zonaDescripcion": "Zona 1",
+  "estado": "LIBRE",
+  "estadoDescripcion": "Libre",
+  "activo": true
+}
+```
+</ResponseExample>

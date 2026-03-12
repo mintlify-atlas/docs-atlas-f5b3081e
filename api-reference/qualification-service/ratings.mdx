@@ -1,0 +1,99 @@
+---
+title: 'Ratings'
+description: 'Submit and manage restaurant ratings'
+---
+
+## Create Rating
+
+<api-endpoint method="POST" endpoint="/calificacion" />
+
+Create a new rating or review for a restaurant entity (dish, reservation, etc.).
+
+### Request Body
+
+<ParamField body="idUsuario" type="integer" required>
+  User ID submitting the rating
+</ParamField>
+
+<ParamField body="tipoEntidad" type="string" required>
+  Type of entity being rated (e.g., "PLATO", "RESERVA")
+</ParamField>
+
+<ParamField body="idEntidad" type="integer" required>
+  ID of the entity being rated
+</ParamField>
+
+<ParamField body="calificacion" type="integer" required>
+  Rating score (1-5)
+</ParamField>
+
+<ParamField body="comentario" type="string">
+  Optional comment or review text
+</ParamField>
+
+### Response
+
+<ResponseField name="valor" type="boolean">
+  Success indicator
+</ResponseField>
+
+<ResponseField name="mensaje" type="string">
+  Response message
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Created rating object
+  <ResponseField name="idCalificacion" type="integer">
+    Rating ID
+  </ResponseField>
+  <ResponseField name="idUsuario" type="integer">
+    User ID
+  </ResponseField>
+  <ResponseField name="tipoEntidad" type="string">
+    Entity type
+  </ResponseField>
+  <ResponseField name="idEntidad" type="integer">
+    Entity ID
+  </ResponseField>
+  <ResponseField name="calificacion" type="integer">
+    Rating score
+  </ResponseField>
+  <ResponseField name="comentario" type="string">
+    Review comment
+  </ResponseField>
+  <ResponseField name="fechaRegistro" type="string">
+    Registration timestamp
+  </ResponseField>
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X POST https://api.korofood.com/calificacion \
+  -H "Content-Type: application/json" \
+  -d '{
+    "idUsuario": 123,
+    "tipoEntidad": "PLATO",
+    "idEntidad": 101,
+    "calificacion": 5,
+    "comentario": "Excelente ceviche, muy fresco y bien servido"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "valor": true,
+  "mensaje": "Calificación registrada exitosamente",
+  "data": {
+    "idCalificacion": 567,
+    "idUsuario": 123,
+    "tipoEntidad": "PLATO",
+    "idEntidad": 101,
+    "calificacion": 5,
+    "comentario": "Excelente ceviche, muy fresco y bien servido",
+    "fechaRegistro": "2026-03-12T16:30:00"
+  }
+}
+```
+</ResponseExample>
